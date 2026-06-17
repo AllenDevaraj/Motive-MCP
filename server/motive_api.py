@@ -23,6 +23,33 @@ class MotiveError(RuntimeError):
     """Raised when an NPTrackingTools call returns a non-success NPRESULT."""
 
 
+def _setup_qt_platform(motive_dir: str) -> str | None:
+    """Locate Motive's bundled Qt 'platforms' plugin dir (the one holding qwindows.dll) and point
+    Qt at it via QT_QPA_PLATFORM_PLUGIN_PATH / QT_PLUGIN_PATH.
+
+    Motive is a Qt app; TT_Initialize() spins up a Qt platform integration. When the Motive engine
+    DLL is loaded from a foreign working directory (e.g. a Python process), Qt cannot find
+    platforms\\qwindows.dll and fails with:
+        'could not find or load the Qt platform plugin "windows"'.
+    Setting these env vars before TT_Initialize() fixes it. Returns the path used, or None.
+    """
+    plat = None
+    for d in (os.path.join(motive_dir, "platforms"),
+              os.path.join(motive_dir, "lib", "platforms")):
+        if os.path.isfile(os.path.join(d, "qwindows.dll")):
+            plat = d
+            break
+    if plat is None and os.path.isdir(motive_dir):
+        for base, _dirs, files in os.walk(motive_dir):
+            if "qwindows.dll" in files:
+                plat = base
+                break
+    if plat:
+        os.environ["QT_QPA_PLATFORM_PLUGIN_PATH"] = plat
+        os.environ.setdefault("QT_PLUGIN_PATH", os.path.dirname(plat))
+    return plat
+
+
 class MotiveAPI:
     def __init__(self, motive_dir: str = DEFAULT_MOTIVE_DIR, dll_path: str | None = None):
         self.motive_dir = motive_dir
@@ -37,6 +64,8 @@ class MotiveAPI:
                 except (AttributeError, OSError):
                     pass
         os.environ["PATH"] = motive_dir + os.pathsep + os.environ.get("PATH", "")
+        # Point Qt at Motive's bundled platform plugin before the engine starts (see helper).
+        self.qt_platform_path = _setup_qt_platform(motive_dir)
         self.lib = ctypes.CDLL(self.dll_path)
         self._declare()
 

@@ -239,6 +239,11 @@ def _selftest(motive_dir: str) -> int:
     print("[selftest] loading NPTrackingToolsx64.dll ...")
     api = MotiveAPI(motive_dir=motive_dir)
     print(f"[selftest] DLL loaded. build={api.build_number()}")
+    if api.qt_platform_path:
+        print(f"[selftest] Qt platform plugin dir: {api.qt_platform_path}")
+    else:
+        print("[selftest] WARNING: qwindows.dll not found under the Motive dir — "
+              "Qt init will likely fail. Pass --motive-dir to the real install path.")
     print("[selftest] TT_Initialize() (Motive GUI must be closed) ...")
     try:
         api.initialize()
