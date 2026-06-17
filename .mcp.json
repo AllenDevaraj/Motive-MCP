@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "motive": {
+      "type": "http",
+      "url": "http://192.168.50.44:8765/mcp"
+    }
+  }
+}

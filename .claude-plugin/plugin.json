@@ -1,0 +1,8 @@
+{
+  "name": "motive-mocap",
+  "version": "0.1.0",
+  "description": "Control an OptiTrack Motive 2.2 system from Claude — load calibration, manage rigid bodies, and toggle VRPN/NatNet streaming via an MCP server (Python + ctypes over the NPTrackingTools API). Built to stream the Unitree H1-2 pelvis pose into the MJPC controller.",
+  "author": {
+    "name": "the2xman"
+  }
+}

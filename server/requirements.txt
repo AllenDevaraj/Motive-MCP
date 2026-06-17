@@ -1,0 +1,4 @@
+# Motive MCP server (Windows OptiTrack PC) — install per-user, no admin:
+#   python -m pip install --user -r requirements.txt
+# Python must be 64-bit to match NPTrackingToolsx64.dll.
+mcp[cli]>=1.2
