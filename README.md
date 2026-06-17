@@ -57,11 +57,15 @@ See the **motive-deploy** skill (or `skills/motive-deploy/SKILL.md`). Short vers
 3. `.\run_server.ps1` → note the printed `http://<ip>:8765/mcp`.
 4. Laptop: `claude mcp add --transport http motive http://<ip>:8765/mcp`.
 
-## ⚠️ Status: built, not yet validated on hardware
+## ✅ Status: hardware-validated (selftest PASS, 2026-06-17)
 
-The server was written on a Linux dev machine with **no access to the DLL or cameras**, against the
-*confirmed* 2.2 API surface (header dumped from the actual install). It is **syntax-checked only**.
-First real validation = `--selftest` on the Windows PC. Treat v0.1.0 as untested until then.
+`--selftest` **PASSED on the lab's OptiTrack PC**: DLL loaded (build 48012), `TT_Initialize` OK,
+**5× Prime 17W @ 360 Hz** enumerated (#32710–32716), 38 existing rigid bodies listed. The
+ctypes↔DLL binding and engine init are confirmed on the real system. The Qt platform-plugin path is
+auto-resolved — on this install it lives at `…\Motive\assemblies\x64\platforms`.
+
+Still unverified end-to-end: the running HTTP server + live tool calls, VRPN/NatNet streaming
+reachability on the IRLab interface, and the OptiTrack→DDS bridge. Next: run the server and connect.
 
 ## Operator gates (confirm before first deploy)
 
