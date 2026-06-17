@@ -273,6 +273,10 @@ def main() -> int:
                     choices=["streamable-http", "sse", "stdio"])
     ap.add_argument("--selftest", action="store_true",
                     help="load the DLL, init the engine, list cameras, exit (no MCP serving)")
+    ap.add_argument("--allowed-host", action="append", default=[],
+                    help="Host header value to allow, e.g. 192.168.50.44:8765 (repeatable). If set, "
+                         "DNS-rebinding protection stays ON and only these hosts pass. Default: "
+                         "protection OFF for the trusted LAN (fixes 421 'Invalid Host header').")
     args = ap.parse_args()
     _motive_dir = args.motive_dir
 
@@ -281,6 +285,25 @@ def main() -> int:
 
     mcp.settings.host = args.host
     mcp.settings.port = args.port
+
+    # The MCP streamable-http transport blocks non-localhost Host headers by default (DNS-rebinding
+    # protection) -> '421 Invalid Host header' when connecting by LAN IP. Relax it for our trusted,
+    # firewall-off lab LAN. With --allowed-host, keep protection on and whitelist instead.
+    try:
+        from mcp.server.transport_security import TransportSecuritySettings
+        if args.allowed_host:
+            sec = TransportSecuritySettings(enable_dns_rebinding_protection=True,
+                                            allowed_hosts=args.allowed_host,
+                                            allowed_origins=["*"])
+            print(f"[motive-mcp] DNS-rebinding protection ON; allowed hosts: {args.allowed_host}")
+        else:
+            sec = TransportSecuritySettings(enable_dns_rebinding_protection=False)
+            print("[motive-mcp] DNS-rebinding protection OFF (trusted LAN) — any Host header accepted")
+        mcp.settings.transport_security = sec
+    except Exception as e:
+        print(f"[motive-mcp] WARNING: could not set transport security ({e}); "
+              "if you get 421 'Invalid Host header', upgrade the 'mcp' package.")
+
     print(f"[motive-mcp] serving {args.transport} on {args.host}:{args.port}/mcp "
           f"(motive_dir={args.motive_dir})", flush=True)
     mcp.run(transport=args.transport)
