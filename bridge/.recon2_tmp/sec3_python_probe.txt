@@ -1,0 +1,16 @@
+﻿python : Python was not found; run without arguments to install from the Microsoft Store, or disable this shortcut 
+from Settings > Apps > Advanced app settings > App execution aliases.
+At C:\Users\arpg\AppData\Local\Temp\ps-script-60959d4b-19d8-482f-b5a6-260cc64fc2c8.ps1:110 char:1747
++ ... le -FilePath $sec3a -Encoding utf8 -Append; (python --version) 2>&1 | ...
++                                                  ~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (Python was not ...cution aliases.:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+python : Python was not found; run without arguments to install from the Microsoft Store, or disable this shortcut 
+from Settings > Apps > Advanced app settings > App execution aliases.
+At C:\Users\arpg\AppData\Local\Temp\ps-script-60959d4b-19d8-482f-b5a6-260cc64fc2c8.ps1:110 char:1815
++ ... ding utf8; (python -c "import struct; print(struct.calcsize('P')*8)") ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (Python was not ...cution aliases.:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 

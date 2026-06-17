@@ -1,6 +1,6 @@
 # Launch the Motive MCP server on the Windows OptiTrack PC.
 #
-# PRE-FLIGHT: the Motive GUI must be CLOSED — the NPTrackingTools API takes ownership of the
+# PRE-FLIGHT: the Motive GUI must be CLOSED - the NPTrackingTools API takes ownership of the
 # cameras, so the GUI and this server cannot both hold them.
 #
 # Usage:
@@ -13,7 +13,7 @@ $here = Split-Path -Parent $MyInvocation.MyCommand.Path
 
 $motive = Get-Process Motive -ErrorAction SilentlyContinue
 if ($motive) {
-    Write-Host "Motive GUI is running (PID $($motive.Id)). Close it first — the API needs the cameras." -ForegroundColor Red
+    Write-Host "Motive GUI is running (PID $($motive.Id)). Close it first - the API needs the cameras." -ForegroundColor Red
     exit 1
 }
 

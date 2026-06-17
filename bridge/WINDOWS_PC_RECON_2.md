@@ -1,0 +1,504 @@
+﻿# WINDOWS_PC_RECON_2
+
+Generated: 2026-06-17 15:42:54 -06:00
+
+## 1. Confirm the Motive API DLL (NPTrackingToolsx64.dll)
+
+### Command output (exact): recursive NPTracking dll/lib search
+
+```powershell
+
+FullName                                                                               Length LastWriteTime        
+--------                                                                               ------ -------------        
+C:\Program Files\OptiTrack\Motive\lib\NPTrackingToolsx64.dll                         50607104 11/8/2019 10:12:44 AM
+C:\Program Files\OptiTrack\Motive\lib\NPTrackingToolsx64.lib                          1889978 11/8/2019 10:12:28 AM
+C:\Program Files\OptiTrack\Motive\Samples\markers\Release\x64\NPTrackingToolsx64.dll 50607104 11/8/2019 10:12:44 AM
+C:\Program Files\OptiTrack\Motive\Samples\markers\Release\x64\NPTrackingToolsx64.lib  1889978 11/8/2019 10:12:28 AM
+C:\Program Files\OptiTrack\Motive\Tools\NPTrackingToolsx64.dll                       50607104 11/8/2019 10:12:44 AM
+
+
+
+```
+Note: results returned.
+
+### Command output (exact): Motive lib folder listing
+
+```powershell
+
+Name                     Length
+----                     ------
+NPTrackingToolsx64.dll 50607104
+NPTrackingToolsx64.lib  1889978
+
+
+
+```
+Note: results returned.
+
+### Evaluation
+
+- NPTrackingToolsx64.dll exists: **True**
+- Path: C:\Program Files\OptiTrack\Motive\lib\NPTrackingToolsx64.dll | Size: 50607104 | LastWriteTime: 11/08/2019 10:12:44
+- Path: C:\Program Files\OptiTrack\Motive\Samples\markers\Release\x64\NPTrackingToolsx64.dll | Size: 50607104 | LastWriteTime: 11/08/2019 10:12:44
+- Path: C:\Program Files\OptiTrack\Motive\Tools\NPTrackingToolsx64.dll | Size: 50607104 | LastWriteTime: 11/08/2019 10:12:44
+- Linchpin assessment: DLL present; ctypes loading is possible without a compiler.
+
+## 2. Dump API surface from NPTrackingTools.h
+
+### Command output (exact): TT_ line extraction
+
+```powershell
+TTAPI   NPRESULT TT_Initialize();      //== Initialize Library ===========================----
+TTAPI   NPRESULT TT_Shutdown();        //== Shutdown Library =============================----
+TTAPI   NPRESULT TT_TestSoftwareMutex(); //== Determine if no other OptiTrack software ===----
+TTAPI   NPRESULT TT_Update();                          //== Process incoming camera data =----
+TTAPI   NPRESULT TT_UpdateSingleFrame();               //== Process incoming camera data =----
+TTAPI   NPRESULT TT_UpdateLastestFrame();              //== Process only the most recent =----
+TTAPI   NPRESULT TT_LoadProfile( const char *filename );     //== Load User Profile File =----
+TTAPI   NPRESULT TT_LoadProfileW( const wchar_t *filename );
+TTAPI   NPRESULT TT_SaveProfile( const char *filename );     //== Save User Profile File =----
+TTAPI   NPRESULT TT_SaveProfileW( const wchar_t *filename );
+TTAPI   NPRESULT TT_LoadCalibrationW( const wchar_t *filename ); //== Load Calibration ===----
+TTAPI   NPRESULT TT_LoadCalibration( const char *filename );
+TTAPI   NPRESULT TT_LoadCalibrationFromMemory( unsigned char* buffer, int bufferSize );
+//== TT_Initialize();
+TTAPI   NPRESULT TT_LoadLicenseFromMemory( const unsigned char * buffer, int bufferSize );
+TTAPI   NPRESULT TT_LoadRigidBodiesW( const wchar_t *filename ); //== Load Rigid Bodies ==----
+TTAPI   NPRESULT TT_LoadRigidBodies( const char *filename );
+TTAPI   NPRESULT TT_SaveRigidBodiesW( const wchar_t *filename ); //== Save Rigid Bodies ==----
+TTAPI   NPRESULT TT_SaveRigidBodies( const char *filename );
+TTAPI   NPRESULT TT_AddRigidBodiesW( const wchar_t *filename ); //== Add Rigid Bodies ====----
+TTAPI   NPRESULT TT_AddRigidBodies( const char *filename );
+TTAPI   NPRESULT TT_StreamTrackd( bool enabled );         //== Start/stop Trackd Stream ==----
+TTAPI   NPRESULT TT_StreamVRPN( bool enabled, int port ); //== Start/stop VRPN Stream ====----
+TTAPI   NPRESULT TT_StreamNP( bool enabled );             //== Start/stop NaturalPoint Stream
+TTAPI   int        TT_FrameMarkerCount();               //== Returns Frame Markers Count =----
+TTAPI   float      TT_FrameMarkerX( int markerIndex );  //== Returns X Coord of Marker ===----
+TTAPI   float      TT_FrameMarkerY( int markerIndex );  //== Returns Y Coord of Marker ===----
+TTAPI   float      TT_FrameMarkerZ( int markerIndex );  //== Returns Z Coord of Marker ===----
+TTAPI   Core::cUID TT_FrameMarkerLabel( int markerIndex ); //== Returns Label of Marker ==----
+TTAPI   float      TT_FrameMarkerResidual( int markerIndex ); //== Returns Residual of Marker
+TTAPI   double     TT_FrameTimeStamp();                 //== Time Stamp of Frame (seconds)
+TTAPI   int        TT_FrameID();                        //== FrameID of Frame
+//== TT_FrameCameraCentroid returns true if the camera is contributing
+TTAPI   bool  TT_FrameCameraCentroid( int markerIndex, int cameraIndex, float &x, float &y );
+//== TT_FlushCameraQueues() to catch up before calling TT_Update().
+//== Ideally, after calling TT_FlushCameraQueues() you'll want to
+//== not call it again until after TT_Update() returns NPRESULT_SUCCESS
+TTAPI   void  TT_FlushCameraQueues();
+TTAPI   bool     TT_IsRigidBodyTracked( int rbIndex );      //== Is rigid body currently tracked
+TTAPI   void     TT_RigidBodyLocation( int rbIndex,         //== RigidBody Index =========----
+TTAPI   void     TT_ClearRigidBodyList();                   //== Clear all rigid bodies ==----
+TTAPI   NPRESULT TT_RemoveRigidBody( int rbIndex );         //== Remove single rigid body ----
+TTAPI   int      TT_RigidBodyCount();                       //== Returns number of rigid bodies
+TTAPI   int      TT_RigidBodyUserData( int rbIndex );       //== Get RigidBodies User Data ---
+TTAPI   void     TT_SetRigidBodyUserData( int rbIndex, int ID ); //== Set RigidBodies User Data
+TTAPI   const char* TT_RigidBodyName( int rbIndex );        //== Returns RigidBody Name ==----
+TTAPI   const wchar_t* TT_RigidBodyNameW( int rbIndex );    //== Returns RigidBody Name ==----
+TTAPI   void     TT_SetRigidBodyEnabled( int rbIndex, bool enabled ); //== Set Tracking ==----
+TTAPI   bool     TT_RigidBodyEnabled( int rbIndex );        //== Get Tracking ============----
+TTAPI   NPRESULT TT_RigidBodyTranslatePivot( int rbIndex, float x, float y, float z );
+TTAPI   bool     TT_RigidBodyResetOrientation( int rbIndex );
+TTAPI   int      TT_RigidBodyMarkerCount( int rbIndex );    //== Get marker count ========----
+TTAPI   bool     TT_RigidBodyMarker( int rbIndex, int markerIndex, //== Get RigidBody mrkr ---
+TTAPI   bool     TT_RigidBodyUpdateMarker( int rbIndex, int markerIndex, //== Update RigidBody mrkr
+TTAPI   bool     TT_RigidBodyPointCloudMarker( int rbIndex, //== Get corresponding point cloud marker
+TTAPI   bool     TT_RigidBodyPlacedMarker( int rbIndex,     //== Get world location of the rigid body
+TTAPI   float    TT_RigidBodyMeanError( int rbIndex );      //== Get mean error of tracked rigid
+TTAPI   Core::cUID  TT_RigidBodyID( int rbIndex );          //== Get rigid body cUID.
+TTAPI   NPRESULT TT_CreateRigidBody( const char* name, int id, int markerCount, float *markerList );
+TTAPI   NPRESULT TT_RigidBodySettings( int rbIndex, RigidBodySolver::cRigidBodySettings &settings );  //== Get RigidBody Settings =---
+TTAPI   NPRESULT TT_SetRigidBodySettings( int rbIndex, RigidBodySolver::cRigidBodySettings &settings );  //== Set RigidBody Settings =---
+TTAPI   CameraLibrary::CameraManager* TT_GetCameraManager(); //== Returns a pointer to the Camera SDK's
+TTAPI   int	     TT_BuildNumber();                          //== Software Release Build # ----
+TTAPI   int      TT_CameraGroupCount();                     //== Returns number of camera groups
+TTAPI   bool     TT_CreateCameraGroup();                    //== Add an additional group =----
+TTAPI   bool     TT_RemoveCameraGroup( int groupIndex );    //== Remove a camera group (must be empty)
+TTAPI   int      TT_CamerasGroup( int cameraIndex );        //== Returns Camera's camera group index
+TTAPI   void     TT_SetGroupShutterDelay( int groupIndex, int microseconds ); //== Set camera group's shutter delay
+TTAPI   void     TT_SetCameraGroup( int cameraIndex, int groupIndex ); //== Move camera to camera group
+TTAPI   NPRESULT TT_CameraGroupFilterSettings( int groupIndex, cCameraGroupFilterSettings &settings );
+TTAPI   NPRESULT TT_SetCameraGroupFilterSettings( int groupIndex, cCameraGroupFilterSettings &settings );
+//== the settings block to TT_SetCameraGroupPointCloudSettings. These methods will return false
+friend TTAPI NPRESULT TT_CameraGroupPointCloudSettings( int groupIndex, cCameraGroupPointCloudSettings &settings );
+friend TTAPI NPRESULT TT_SetCameraGroupPointCloudSettings( int groupIndex, cCameraGroupPointCloudSettings &settings );
+TTAPI   NPRESULT TT_CameraGroupPointCloudSettings( int groupIndex, cCameraGroupPointCloudSettings &settings );
+TTAPI   NPRESULT TT_SetCameraGroupPointCloudSettings( int groupIndex, cCameraGroupPointCloudSettings &settings );
+TTAPI   NPRESULT TT_CameraGroupMarkerSize( int groupIndex, cCameraGroupMarkerSizeSettings &settings );
+TTAPI   NPRESULT TT_SetCameraGroupMarkerSize( int groupIndex, cCameraGroupMarkerSizeSettings &settings );
+TTAPI   NPRESULT TT_SetCameraGroupReconstruction( int groupIndex, bool enable );
+TTAPI   NPRESULT TT_SetEnabledFilterSwitch( bool enabled ); //== Enabled by default ========--
+TTAPI   bool     TT_IsFilterSwitchEnabled();
+TTAPI   int      TT_CameraCount();                          //== Returns Camera Count ===-----
+TTAPI   float    TT_CameraXLocation( int cameraIndex );     //== Returns Camera's X Coord ----
+TTAPI   float    TT_CameraYLocation( int cameraIndex );     //== Returns Camera's Y Coord ----
+TTAPI   float    TT_CameraZLocation( int cameraIndex );     //== Returns Camera's Z Coord ----
+TTAPI   float    TT_CameraOrientationMatrix( int cameraIndex, int matrixIndex ); //== Orientation
+TTAPI   const char* TT_CameraName( int cameraIndex );       //== Returns Camera Name =====----
+TTAPI   int      TT_CameraSerial( int cameraIndex );        //== Returns Camera Serial Number
+TTAPI   int      TT_CameraMarkerCount( int cameraIndex );   //== Camera's 2D Marker Count ----
+TTAPI   bool     TT_CameraMarker( int cameraIndex, int markerIndex, float &x, float &y );
+TTAPI   bool     TT_CameraPixelResolution( int cameraIndex, int &width, int &height );
+//== from the distorted (TT_CameraMarker) position.
+TTAPI   bool     TT_CameraMarkerPredistorted( int cameraIndex, int markerIndex, float &x, float &y );
+TTAPI   bool     TT_SetCameraSettings( int cameraIndex, int videoType, int exposure, int threshold, int intensity );
+//== been initialized with TT_Initialize().
+TTAPI   bool     TT_SetCameraFrameRate( int cameraIndex, int frameRate );
+//== initialized with TT_Initialize()
+TTAPI   int      TT_CameraVideoType( int cameraIndex );
+TTAPI   int      TT_CameraFrameRate( int cameraIndex ); // frames/sec
+TTAPI   int      TT_CameraExposure( int cameraIndex );
+TTAPI   int      TT_CameraThreshold( int cameraIndex );
+TTAPI   int      TT_CameraIntensity( int cameraIndex );
+TTAPI   float    TT_CameraTemperature( int cameraIndex );
+TTAPI   float    TT_CameraRinglightTemperature( int cameraIndex );
+TTAPI   int      TT_CameraGrayscaleDecimation( int cameraIndex );
+TTAPI   bool     TT_SetCameraGrayscaleDecimation( int cameraIndex, int value );
+TTAPI   bool     TT_SetCameraFilterSwitch( int cameraIndex, bool enableIRFilter );
+TTAPI   bool     TT_SetCameraAGC( int cameraIndex, bool enableAutomaticGainControl );
+TTAPI   bool     TT_SetCameraAEC( int cameraIndex, bool enableAutomaticExposureControl );
+TTAPI   bool     TT_SetCameraHighPower( int cameraIndex, bool enableHighPowerMode );
+TTAPI   bool     TT_SetCameraMJPEGHighQuality( int cameraIndex, int mjpegQuality );
+TTAPI   int      TT_CameraImagerGain( int cameraIndex );
+TTAPI   int      TT_CameraImagerGainLevels( int cameraIndex );
+TTAPI   void     TT_SetCameraImagerGain( int cameraIndex, int value );
+TTAPI   bool     TT_IsContinuousIRAvailable( int cameraIndex );
+TTAPI   bool     TT_ContinuousIR( int cameraIndex );
+TTAPI   void     TT_SetContinuousIR( int cameraIndex, bool Enable );
+TTAPI  bool      TT_ClearCameraMask( int cameraIndex );
+TTAPI  bool      TT_SetCameraMask( int cameraIndex, unsigned char * buffer, int bufferSize );
+TTAPI  bool      TT_CameraMask( int cameraIndex, unsigned char * buffer, int bufferSize );
+TTAPI  bool      TT_CameraMaskInfo( int cameraIndex, int &blockingMaskWidth, int &blockingMaskHeight, int &blockingMaskGrid );
+TTAPI  bool      TT_SetCameraState( int cameraIndex, eCameraStates state );
+TTAPI  bool      TT_CameraState( int cameraIndex, eCameraStates &currentState );
+TTAPI   int      TT_CameraID( int cameraIndex );
+TTAPI   bool     TT_CameraFrameBuffer( int cameraIndex, int bufferPixelWidth, int bufferPixelHeight,
+TTAPI   bool     TT_CameraFrameBufferSaveAsBMP( int cameraIndex, const char *filename );
+TTAPI   void     TT_CameraBackproject( int cameraIndex, float x, float y, float z, float &cameraX, float &cameraY );
+TTAPI   void     TT_CameraUndistort2DPoint( int cameraIndex, float &x, float &y );
+TTAPI   void     TT_CameraDistort2DPoint( int cameraIndex, float &x, float &y );
+TTAPI   bool     TT_CameraRay( int cameraIndex, float x, float y, float &rayStartX, float &rayStartY, float &rayStartZ,
+TTAPI   bool     TT_CameraModel( int cameraIndex, float x, float y, float z, //== Camera Position
+TTAPI   bool     TT_CameraPose( int cameraIndex, float x, float y, float z,  //== Camera Position
+struct TT_sCameraInfo
+class TTAPI TT_cCameraList
+TT_cCameraList();
+//== CameraCount() returns the number of cameras present in TT_cCameraList
+//== Camera() returns a TT_sCameraInfo structure that contains camera
+TT_sCameraInfo Camera( int index ) const;
+void AddCamera( const TT_sCameraInfo & cameraInfo );
+std::vector<TT_sCameraInfo> mCameraList;
+TTAPI   TT_cCameraList TT_CameraExtrinsicsCalibrationFromMemory( unsigned char* Buffer, int BufferSize
+TTAPI   CameraLibrary::Camera * TT_GetCamera( int cameraIndex );  //== Returns Camera SDK Camera
+TTAPI   bool TT_SetFrameIDBasedTiming( bool enable );
+TTAPI   bool TT_SetSuppressOutOfOrder( bool enable );
+TTAPI   void TT_AttachCameraModule( int cameraIndex, CameraLibrary::cCameraModule *module );
+TTAPI   void TT_DetachCameraModule( int cameraIndex, CameraLibrary::cCameraModule *module );
+TTAPI   NPRESULT TT_OrientTrackingBar( float positionX, float positionY, float positionZ,
+//== class to a rigid body via TT_AttachRigidBodySolutionTest.  Return false if the presented solution should be
+TTAPI void TT_AttachRigidBodySolutionTest( int rbIndex, cRigidBodySolutionTest* test );
+TTAPI void TT_DetachRigidBodySolutionTest( int rbIndex, cRigidBodySolutionTest* test );
+//== You will want to get a rigid body's ID from TT_RigidBodyID for use with the following functions.  To start the refine process,
+//== call TT_RigidBodyRefineStart with the rigid body's ID along with the number of samples you'd like to take before the refinement is
+TTAPI bool TT_RigidBodyRefineStart( Core::cUID rigidBodyID, int sampleCount );
+//== Call TT_RigidBodyRefineSample() every frame after calling TT_RigiDBodyRefineStart. This will allow the refinement process to collect
+//== samples.  You can check the progress of samples by calling TT_RigidBodyRefineProgress() and it will report a percentage of the total
+TTAPI bool TT_RigidBodyRefineSample();
+//== You can query the state of the refinement process with TT_RigidBodyRefineState().
+enum TT_RigidBodyRefineStates
+TT_RigidBodyRefine_Initialized = 0,
+TT_RigidBodyRefine_Sampling,
+TT_RigidBodyRefine_Solving,
+TT_RigidBodyRefine_Complete,
+TT_RigidBodyRefine_Uninitialized
+TTAPI TT_RigidBodyRefineStates TT_RigidBodyRefineState();
+//== To ensure the refinement solver is collecting samples, call TT_RigidBodyRefineProgress() during TT_RigidBodyRefine_Sampling state.  Progress
+TTAPI float TT_RigidBodyRefineProgress();
+//== Once TT_RigidBodyRefine_Complete state is reached, you can use TT_RigidBodyRefineInitialError() and TT_RigidBodyRefineResultError() to determine
+//== if the result has improved prior to calling TT_RigidBodyRefineApplyResult().
+TTAPI float TT_RigidBodyRefineInitialError();
+TTAPI float TT_RigidBodyRefineResultError();
+//== Apply the resulting rigid body refinement result by calling TT_RigidBodyRefineApplyResult().
+TTAPI bool  TT_RigidBodyRefineApplyResult();
+//== To discard the rigid body refinement result, call TT_RigidBodyRefineReset().
+TTAPI bool  TT_RigidBodyRefineReset();
+//== You will want to get a rigid body's ID from TT_RigidBodyID for use with the following functions.  To start the pivot solving process,
+//== call TT_RigidBodyPivotSolverStart with the rigid body's ID along with the number of samples you'd like to take before the solving is
+TTAPI bool TT_RigidBodyPivotSolverStart( Core::cUID rigidBodyID, int sampleCount );
+//== Call TT_RigidBodyPivotSolverSample() every frame after calling TT_RigidBodyPivotSolverStart. This will allow the solving process to collect
+//== samples.  You can check the progress of samples by calling TT_RigidBodyPivotSolverProgress() and it will report a percentage of the total
+TTAPI bool TT_RigidBodyPivotSolverSample();
+//== You can query the state of the refinement process with TT_RigidBodyPivotSolverState().
+enum TT_RigidBodyPivotSolverStates
+TT_RigidBodyPivotSolver_Initialized = 0,
+TT_RigidBodyPivotSolver_Sampling,
+TT_RigidBodyPivotSolver_Solving,
+TT_RigidBodyPivotSolver_Complete,
+TT_RigidBodyPivotSolver_Uninitialized
+TTAPI TT_RigidBodyPivotSolverStates TT_RigidBodyPivotSolverState();
+//== To ensure the refinement solver is collecting samples, call TT_RigidBodyPivotSolverProgress() during TT_RigidBodyPivotSolver_Sampling state.  Progress
+TTAPI float TT_RigidBodyPivotSolverProgress();
+//== Once TT_RigidBodyPivotSolver_Complete state is reached, you can use TT_RigidBodyPivotSolverInitialError() and TT_RigidBodyPivotSolverResultError() to determine
+//== if the result has improved prior to calling TT_RigidBodyPivotSolverApplyResult().
+TTAPI float TT_RigidBodyPivotSolverInitialError();
+TTAPI float TT_RigidBodyPivotSolverResultError();
+//== Apply the resulting rigid body refinement result by calling TT_RigidBodyPivotSolverApplyResult().
+TTAPI bool  TT_RigidBodyPivotSolverApplyResult();
+//== To discard the rigid body refinement result, call TT_RigidBodyPivotSolverReset().
+TTAPI bool  TT_RigidBodyPivotSolverReset();
+TTAPI bool  TT_SetPixelIntensityMapping( int grayscaleFloor, int mapEntryCount, float *map );
+//== listening class to the TTAPI via TT_AttachListener.
+//== to the TTAPI and is ready for processing.  You can use this notification to then call TT_Update() without
+TTAPI   void     TT_AttachListener( cTTAPIListener* listener );
+TTAPI   void     TT_DetachListener( cTTAPIListener* listener );
+TTAPI   const char* TT_GetResultString( NPRESULT result ); //== Return Plain Text Message ----
+
+```
+Note: results returned.
+
+### Command output (exact): inc header listing
+
+```powershell
+
+Name               
+----               
+RigidBodySolver    
+NPTrackingTools.h  
+RigidBodySettings.h
+
+
+
+```
+Note: results returned.
+
+### Full TT_* function declaration lines extracted from NPTrackingTools.h
+
+```powershell
+TTAPI   NPRESULT TT_Initialize();      //== Initialize Library ===========================----
+TTAPI   NPRESULT TT_Shutdown();        //== Shutdown Library =============================----
+TTAPI   NPRESULT TT_TestSoftwareMutex(); //== Determine if no other OptiTrack software ===----
+TTAPI   NPRESULT TT_Update();                          //== Process incoming camera data =----
+TTAPI   NPRESULT TT_UpdateSingleFrame();               //== Process incoming camera data =----
+TTAPI   NPRESULT TT_UpdateLastestFrame();              //== Process only the most recent =----
+TTAPI   NPRESULT TT_LoadProfile( const char *filename );     //== Load User Profile File =----
+TTAPI   NPRESULT TT_LoadProfileW( const wchar_t *filename );
+TTAPI   NPRESULT TT_SaveProfile( const char *filename );     //== Save User Profile File =----
+TTAPI   NPRESULT TT_SaveProfileW( const wchar_t *filename );
+TTAPI   NPRESULT TT_LoadCalibrationW( const wchar_t *filename ); //== Load Calibration ===----
+TTAPI   NPRESULT TT_LoadCalibration( const char *filename );
+TTAPI   NPRESULT TT_LoadCalibrationFromMemory( unsigned char* buffer, int bufferSize );
+TTAPI   NPRESULT TT_LoadLicenseFromMemory( const unsigned char * buffer, int bufferSize );
+TTAPI   NPRESULT TT_LoadRigidBodiesW( const wchar_t *filename ); //== Load Rigid Bodies ==----
+TTAPI   NPRESULT TT_LoadRigidBodies( const char *filename );
+TTAPI   NPRESULT TT_SaveRigidBodiesW( const wchar_t *filename ); //== Save Rigid Bodies ==----
+TTAPI   NPRESULT TT_SaveRigidBodies( const char *filename );
+TTAPI   NPRESULT TT_AddRigidBodiesW( const wchar_t *filename ); //== Add Rigid Bodies ====----
+TTAPI   NPRESULT TT_AddRigidBodies( const char *filename );
+TTAPI   NPRESULT TT_StreamTrackd( bool enabled );         //== Start/stop Trackd Stream ==----
+TTAPI   NPRESULT TT_StreamVRPN( bool enabled, int port ); //== Start/stop VRPN Stream ====----
+TTAPI   NPRESULT TT_StreamNP( bool enabled );             //== Start/stop NaturalPoint Stream
+TTAPI   int        TT_FrameMarkerCount();               //== Returns Frame Markers Count =----
+TTAPI   float      TT_FrameMarkerX( int markerIndex );  //== Returns X Coord of Marker ===----
+TTAPI   float      TT_FrameMarkerY( int markerIndex );  //== Returns Y Coord of Marker ===----
+TTAPI   float      TT_FrameMarkerZ( int markerIndex );  //== Returns Z Coord of Marker ===----
+TTAPI   Core::cUID TT_FrameMarkerLabel( int markerIndex ); //== Returns Label of Marker ==----
+TTAPI   float      TT_FrameMarkerResidual( int markerIndex ); //== Returns Residual of Marker
+TTAPI   double     TT_FrameTimeStamp();                 //== Time Stamp of Frame (seconds)
+TTAPI   int        TT_FrameID();                        //== FrameID of Frame
+TTAPI   bool  TT_FrameCameraCentroid( int markerIndex, int cameraIndex, float &x, float &y );
+TTAPI   void  TT_FlushCameraQueues();
+TTAPI   bool     TT_IsRigidBodyTracked( int rbIndex );      //== Is rigid body currently tracked
+TTAPI   void     TT_RigidBodyLocation( int rbIndex,         //== RigidBody Index =========----
+TTAPI   void     TT_ClearRigidBodyList();                   //== Clear all rigid bodies ==----
+TTAPI   NPRESULT TT_RemoveRigidBody( int rbIndex );         //== Remove single rigid body ----
+TTAPI   int      TT_RigidBodyCount();                       //== Returns number of rigid bodies
+TTAPI   int      TT_RigidBodyUserData( int rbIndex );       //== Get RigidBodies User Data ---
+TTAPI   void     TT_SetRigidBodyUserData( int rbIndex, int ID ); //== Set RigidBodies User Data
+TTAPI   const char* TT_RigidBodyName( int rbIndex );        //== Returns RigidBody Name ==----
+TTAPI   const wchar_t* TT_RigidBodyNameW( int rbIndex );    //== Returns RigidBody Name ==----
+TTAPI   void     TT_SetRigidBodyEnabled( int rbIndex, bool enabled ); //== Set Tracking ==----
+TTAPI   bool     TT_RigidBodyEnabled( int rbIndex );        //== Get Tracking ============----
+TTAPI   NPRESULT TT_RigidBodyTranslatePivot( int rbIndex, float x, float y, float z );
+TTAPI   bool     TT_RigidBodyResetOrientation( int rbIndex );
+TTAPI   int      TT_RigidBodyMarkerCount( int rbIndex );    //== Get marker count ========----
+TTAPI   bool     TT_RigidBodyMarker( int rbIndex, int markerIndex, //== Get RigidBody mrkr ---
+TTAPI   bool     TT_RigidBodyUpdateMarker( int rbIndex, int markerIndex, //== Update RigidBody mrkr
+TTAPI   bool     TT_RigidBodyPointCloudMarker( int rbIndex, //== Get corresponding point cloud marker
+TTAPI   bool     TT_RigidBodyPlacedMarker( int rbIndex,     //== Get world location of the rigid body
+TTAPI   float    TT_RigidBodyMeanError( int rbIndex );      //== Get mean error of tracked rigid
+TTAPI   Core::cUID  TT_RigidBodyID( int rbIndex );          //== Get rigid body cUID.
+TTAPI   NPRESULT TT_CreateRigidBody( const char* name, int id, int markerCount, float *markerList );
+TTAPI   NPRESULT TT_RigidBodySettings( int rbIndex, RigidBodySolver::cRigidBodySettings &settings );  //== Get RigidBody Settings =---
+TTAPI   NPRESULT TT_SetRigidBodySettings( int rbIndex, RigidBodySolver::cRigidBodySettings &settings );  //== Set RigidBody Settings =---
+TTAPI   CameraLibrary::CameraManager* TT_GetCameraManager(); //== Returns a pointer to the Camera SDK's
+TTAPI   int	     TT_BuildNumber();                          //== Software Release Build # ----
+TTAPI   int      TT_CameraGroupCount();                     //== Returns number of camera groups
+TTAPI   bool     TT_CreateCameraGroup();                    //== Add an additional group =----
+TTAPI   bool     TT_RemoveCameraGroup( int groupIndex );    //== Remove a camera group (must be empty)
+TTAPI   int      TT_CamerasGroup( int cameraIndex );        //== Returns Camera's camera group index
+TTAPI   void     TT_SetGroupShutterDelay( int groupIndex, int microseconds ); //== Set camera group's shutter delay
+TTAPI   void     TT_SetCameraGroup( int cameraIndex, int groupIndex ); //== Move camera to camera group
+TTAPI   NPRESULT TT_CameraGroupFilterSettings( int groupIndex, cCameraGroupFilterSettings &settings );
+TTAPI   NPRESULT TT_SetCameraGroupFilterSettings( int groupIndex, cCameraGroupFilterSettings &settings );
+friend TTAPI NPRESULT TT_CameraGroupPointCloudSettings( int groupIndex, cCameraGroupPointCloudSettings &settings );
+friend TTAPI NPRESULT TT_SetCameraGroupPointCloudSettings( int groupIndex, cCameraGroupPointCloudSettings &settings );
+TTAPI   NPRESULT TT_CameraGroupPointCloudSettings( int groupIndex, cCameraGroupPointCloudSettings &settings );
+TTAPI   NPRESULT TT_SetCameraGroupPointCloudSettings( int groupIndex, cCameraGroupPointCloudSettings &settings );
+TTAPI   NPRESULT TT_CameraGroupMarkerSize( int groupIndex, cCameraGroupMarkerSizeSettings &settings );
+TTAPI   NPRESULT TT_SetCameraGroupMarkerSize( int groupIndex, cCameraGroupMarkerSizeSettings &settings );
+TTAPI   NPRESULT TT_SetCameraGroupReconstruction( int groupIndex, bool enable );
+TTAPI   NPRESULT TT_SetEnabledFilterSwitch( bool enabled ); //== Enabled by default ========--
+TTAPI   bool     TT_IsFilterSwitchEnabled();
+TTAPI   int      TT_CameraCount();                          //== Returns Camera Count ===-----
+TTAPI   float    TT_CameraXLocation( int cameraIndex );     //== Returns Camera's X Coord ----
+TTAPI   float    TT_CameraYLocation( int cameraIndex );     //== Returns Camera's Y Coord ----
+TTAPI   float    TT_CameraZLocation( int cameraIndex );     //== Returns Camera's Z Coord ----
+TTAPI   float    TT_CameraOrientationMatrix( int cameraIndex, int matrixIndex ); //== Orientation
+TTAPI   const char* TT_CameraName( int cameraIndex );       //== Returns Camera Name =====----
+TTAPI   int      TT_CameraSerial( int cameraIndex );        //== Returns Camera Serial Number
+TTAPI   int      TT_CameraMarkerCount( int cameraIndex );   //== Camera's 2D Marker Count ----
+TTAPI   bool     TT_CameraMarker( int cameraIndex, int markerIndex, float &x, float &y );
+TTAPI   bool     TT_CameraPixelResolution( int cameraIndex, int &width, int &height );
+TTAPI   bool     TT_CameraMarkerPredistorted( int cameraIndex, int markerIndex, float &x, float &y );
+TTAPI   bool     TT_SetCameraSettings( int cameraIndex, int videoType, int exposure, int threshold, int intensity );
+TTAPI   bool     TT_SetCameraFrameRate( int cameraIndex, int frameRate );
+TTAPI   int      TT_CameraVideoType( int cameraIndex );
+TTAPI   int      TT_CameraFrameRate( int cameraIndex ); // frames/sec
+TTAPI   int      TT_CameraExposure( int cameraIndex );
+TTAPI   int      TT_CameraThreshold( int cameraIndex );
+TTAPI   int      TT_CameraIntensity( int cameraIndex );
+TTAPI   float    TT_CameraTemperature( int cameraIndex );
+TTAPI   float    TT_CameraRinglightTemperature( int cameraIndex );
+TTAPI   int      TT_CameraGrayscaleDecimation( int cameraIndex );
+TTAPI   bool     TT_SetCameraGrayscaleDecimation( int cameraIndex, int value );
+TTAPI   bool     TT_SetCameraFilterSwitch( int cameraIndex, bool enableIRFilter );
+TTAPI   bool     TT_SetCameraAGC( int cameraIndex, bool enableAutomaticGainControl );
+TTAPI   bool     TT_SetCameraAEC( int cameraIndex, bool enableAutomaticExposureControl );
+TTAPI   bool     TT_SetCameraHighPower( int cameraIndex, bool enableHighPowerMode );
+TTAPI   bool     TT_SetCameraMJPEGHighQuality( int cameraIndex, int mjpegQuality );
+TTAPI   int      TT_CameraImagerGain( int cameraIndex );
+TTAPI   int      TT_CameraImagerGainLevels( int cameraIndex );
+TTAPI   void     TT_SetCameraImagerGain( int cameraIndex, int value );
+TTAPI   bool     TT_IsContinuousIRAvailable( int cameraIndex );
+TTAPI   bool     TT_ContinuousIR( int cameraIndex );
+TTAPI   void     TT_SetContinuousIR( int cameraIndex, bool Enable );
+TTAPI  bool      TT_ClearCameraMask( int cameraIndex );
+TTAPI  bool      TT_SetCameraMask( int cameraIndex, unsigned char * buffer, int bufferSize );
+TTAPI  bool      TT_CameraMask( int cameraIndex, unsigned char * buffer, int bufferSize );
+TTAPI  bool      TT_CameraMaskInfo( int cameraIndex, int &blockingMaskWidth, int &blockingMaskHeight, int &blockingMaskGrid );
+TTAPI  bool      TT_SetCameraState( int cameraIndex, eCameraStates state );
+TTAPI  bool      TT_CameraState( int cameraIndex, eCameraStates &currentState );
+TTAPI   int      TT_CameraID( int cameraIndex );
+TTAPI   bool     TT_CameraFrameBuffer( int cameraIndex, int bufferPixelWidth, int bufferPixelHeight,
+TTAPI   bool     TT_CameraFrameBufferSaveAsBMP( int cameraIndex, const char *filename );
+TTAPI   void     TT_CameraBackproject( int cameraIndex, float x, float y, float z, float &cameraX, float &cameraY );
+TTAPI   void     TT_CameraUndistort2DPoint( int cameraIndex, float &x, float &y );
+TTAPI   void     TT_CameraDistort2DPoint( int cameraIndex, float &x, float &y );
+TTAPI   bool     TT_CameraRay( int cameraIndex, float x, float y, float &rayStartX, float &rayStartY, float &rayStartZ,
+TTAPI   bool     TT_CameraModel( int cameraIndex, float x, float y, float z, //== Camera Position
+TTAPI   bool     TT_CameraPose( int cameraIndex, float x, float y, float z,  //== Camera Position
+TTAPI   TT_cCameraList TT_CameraExtrinsicsCalibrationFromMemory( unsigned char* Buffer, int BufferSize
+TTAPI   CameraLibrary::Camera * TT_GetCamera( int cameraIndex );  //== Returns Camera SDK Camera
+TTAPI   bool TT_SetFrameIDBasedTiming( bool enable );
+TTAPI   bool TT_SetSuppressOutOfOrder( bool enable );
+TTAPI   void TT_AttachCameraModule( int cameraIndex, CameraLibrary::cCameraModule *module );
+TTAPI   void TT_DetachCameraModule( int cameraIndex, CameraLibrary::cCameraModule *module );
+TTAPI   NPRESULT TT_OrientTrackingBar( float positionX, float positionY, float positionZ,
+TTAPI void TT_AttachRigidBodySolutionTest( int rbIndex, cRigidBodySolutionTest* test );
+TTAPI void TT_DetachRigidBodySolutionTest( int rbIndex, cRigidBodySolutionTest* test );
+TTAPI bool TT_RigidBodyRefineStart( Core::cUID rigidBodyID, int sampleCount );
+TTAPI bool TT_RigidBodyRefineSample();
+TTAPI TT_RigidBodyRefineStates TT_RigidBodyRefineState();
+TTAPI float TT_RigidBodyRefineProgress();
+TTAPI float TT_RigidBodyRefineInitialError();
+TTAPI float TT_RigidBodyRefineResultError();
+TTAPI bool  TT_RigidBodyRefineApplyResult();
+TTAPI bool  TT_RigidBodyRefineReset();
+TTAPI bool TT_RigidBodyPivotSolverStart( Core::cUID rigidBodyID, int sampleCount );
+TTAPI bool TT_RigidBodyPivotSolverSample();
+TTAPI TT_RigidBodyPivotSolverStates TT_RigidBodyPivotSolverState();
+TTAPI float TT_RigidBodyPivotSolverProgress();
+TTAPI float TT_RigidBodyPivotSolverInitialError();
+TTAPI float TT_RigidBodyPivotSolverResultError();
+TTAPI bool  TT_RigidBodyPivotSolverApplyResult();
+TTAPI bool  TT_RigidBodyPivotSolverReset();
+TTAPI bool  TT_SetPixelIntensityMapping( int grayscaleFloor, int mapEntryCount, float *map );
+TTAPI   void     TT_AttachListener( cTTAPIListener* listener );
+TTAPI   void     TT_DetachListener( cTTAPIListener* listener );
+TTAPI   const char* TT_GetResultString( NPRESULT result ); //== Return Plain Text Message ----
+
+```
+Extraction status: succeeded.
+
+## 3. Python + internet checks
+
+### Command output (exact): python resolution + internet reachability
+
+```powershell
+
+Name        Source                                                       
+----        ------                                                       
+python.exe  C:\Users\arpg\AppData\Local\Microsoft\WindowsApps\python.exe 
+python3.exe C:\Users\arpg\AppData\Local\Microsoft\WindowsApps\python3.exe
+
+
+True
+True
+
+```
+### Extra output: python usability probe
+
+```powershell
+python : Python was not found; run without arguments to install from the Microsoft Store, or disable this shortcut 
+from Settings > Apps > Advanced app settings > App execution aliases.
+At C:\Users\arpg\AppData\Local\Temp\ps-script-60959d4b-19d8-482f-b5a6-260cc64fc2c8.ps1:110 char:1747
++ ... le -FilePath $sec3a -Encoding utf8 -Append; (python --version) 2>&1 | ...
++                                                  ~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (Python was not ...cution aliases.:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+python : Python was not found; run without arguments to install from the Microsoft Store, or disable this shortcut 
+from Settings > Apps > Advanced app settings > App execution aliases.
+At C:\Users\arpg\AppData\Local\Temp\ps-script-60959d4b-19d8-482f-b5a6-260cc64fc2c8.ps1:110 char:1815
++ ... ding utf8; (python -c "import struct; print(struct.calcsize('P')*8)") ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (Python was not ...cution aliases.:String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+
+```
+### Evaluation
+
+- Usable Python path (not WindowsApps stub): **False**
+- Test-NetConnection www.python.org:443: **True**
+- Test-NetConnection pypi.org:443: **True**
+- Python usability: only WindowsApps Store alias detected; python command currently not usable.
+- Install step: **not performed** (approval pending).
+
+### Conditional install commands (ready to run after operator approval)
+
+```powershell
+winget install -e --id Python.Python.3.12 --scope user   # OR download python.org installer, "Install for me only", PATH on
+# then, in a NEW shell:
+python -m pip install --user --upgrade pip
+python -m pip install --user "mcp[cli]" fastmcp
+python -c "import struct; print('python', struct.calcsize('P')*8, 'bit')"   # MUST be 64-bit to match NPTrackingToolsx64.dll
+```
+Operator approval status: **operator confirmation required**
+
+## 4. Operator decisions (prose answers required)
+
+1. GUI vs headless (Motive GUI closed while server runs): **operator confirmation required**
+   - Placeholder: <yes/no + constraints>
+2. Shared-machine etiquette/permissions: **operator confirmation required**
+   - Placeholder: <approved actions, time windows, who to notify>
+3. Scope check (only rigid-body + streaming, no automated wand calibration): **operator confirmation required**
+   - Placeholder: <yes/no>
+4. Motive edition/license (GUI > Help > About): **operator confirmation required**
+   - Placeholder: <exact edition + license type>
+
+## Checklist
+- [x] DLL path(s) for NPTrackingToolsx64.dll (+ lib folder listing) - or 'not present'
+- [x] Full TT_* function list from the header
+- [x] Python: usable real Python? internet True/True? per-user install + pip result + bitness
+- [x] Operator answers to the 4 questions (marked operator confirmation required with placeholders; no fabrication)
