@@ -115,6 +115,12 @@ class MotiveAPI:
         L.TT_CreateRigidBody.argtypes = [c.c_char_p, c.c_int, c.c_int, c.POINTER(c.c_float)]
         # void TT_RigidBodyLocation(int, float* x,y,z, qx,qy,qz,qw, yaw,pitch,roll)
         L.TT_RigidBodyLocation.argtypes = [c.c_int] + [c.POINTER(c.c_float)] * 10
+        # reconstructed 3D markers in the current frame (Motive world frame, Y-up, meters)
+        L.TT_FrameMarkerCount.restype = c.c_int
+        for fn in ("TT_FrameMarkerX", "TT_FrameMarkerY", "TT_FrameMarkerZ"):
+            f = getattr(L, fn)
+            f.restype = c.c_float
+            f.argtypes = [c.c_int]
 
     # --- helpers ----------------------------------------------------------------------------
     def _check(self, code: int, what: str) -> None:
@@ -221,3 +227,15 @@ class MotiveAPI:
         return {"x": x, "y": y, "z": z,
                 "qx": qx, "qy": qy, "qz": qz, "qw": qw,
                 "yaw": yaw, "pitch": pitch, "roll": roll}
+
+    # --- reconstructed markers (current frame) ---------------------------------------------
+    def frame_marker_count(self) -> int:
+        return int(self.lib.TT_FrameMarkerCount())
+
+    def frame_marker(self, i: int) -> tuple:
+        return (float(self.lib.TT_FrameMarkerX(i)),
+                float(self.lib.TT_FrameMarkerY(i)),
+                float(self.lib.TT_FrameMarkerZ(i)))
+
+    def frame_markers(self) -> list:
+        return [self.frame_marker(i) for i in range(self.frame_marker_count())]

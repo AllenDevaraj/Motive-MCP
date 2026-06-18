@@ -152,6 +152,50 @@ def create_rigid_body(name: str, marker_xyz_m: list[float], rb_id: int = 1) -> d
 
 
 @mcp.tool()
+def list_markers() -> dict:
+    """List every reconstructed 3D marker in the current frame (x,y,z meters, Motive world frame,
+    which is Y-up — Y is height). Call this BEFORE create_rigid_body_from_markers to confirm only the
+    intended markers (e.g. the H1-2 pelvis cluster) are present, and to read their height band so you
+    can isolate one cluster when other markers are in the volume."""
+    with _lock:
+        api = _require()
+        api.update()  # pull a fresh frame so the marker list is current
+        ms = api.frame_markers()
+        ys = [m[1] for m in ms]
+        return {"count": len(ms),
+                "markers": [{"x": round(x, 4), "y": round(y, 4), "z": round(z, 4)} for (x, y, z) in ms],
+                "y_height_range": [round(min(ys), 4), round(max(ys), 4)] if ms else None}
+
+
+@mcp.tool()
+def create_rigid_body_from_markers(name: str, rb_id: int = 1,
+                                   y_min: float = -1e9, y_max: float = 1e9) -> dict:
+    """Create a rigid body from the CURRENTLY VISIBLE reconstructed markers, pivot at their centroid.
+    Optionally restrict to markers within a Motive-Y (height) band [y_min, y_max] to isolate one
+    cluster (e.g. the pelvis) when other markers share the volume. For the H1-2 the bridge applies the
+    pelvis->IMU offset, so a centroid pivot is fine. Run list_markers() first to pick the band. Returns
+    the markers used + centroid (sanity-check the centroid height before trusting it)."""
+    with _lock:
+        api = _require()
+        api.update()
+        allm = api.frame_markers()
+        used = [m for m in allm if y_min <= m[1] <= y_max]
+        if len(used) < 3:
+            raise MotiveError(f"need >=3 markers to define a rigid body; found {len(used)} in "
+                              f"y in [{y_min}, {y_max}] (total visible {len(allm)})")
+        cx = sum(m[0] for m in used) / len(used)
+        cy = sum(m[1] for m in used) / len(used)
+        cz = sum(m[2] for m in used) / len(used)
+        offsets = []
+        for (x, y, z) in used:
+            offsets += [x - cx, y - cy, z - cz]   # marker positions relative to the pivot (centroid)
+        api.create_rigid_body(name, rb_id, offsets)
+        return {"ok": True, "name": name, "markers_used": len(used), "total_visible": len(allm),
+                "centroid": {"x": round(cx, 4), "y": round(cy, 4), "z": round(cz, 4)},
+                "count": api.rigid_body_count()}
+
+
+@mcp.tool()
 def set_rigid_body_enabled(name_or_index: str, enabled: bool = True) -> dict:
     """Enable/disable tracking of a rigid body by name or index."""
     with _lock:
