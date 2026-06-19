@@ -1,81 +1,81 @@
-# motive-mocap
+# motive-mocap — OptiTrack → Unitree H1-2 base publisher
 
-A Claude Code plugin that lets Claude control the lab's **OptiTrack Motive 2.2** system — load
-calibration, manage rigid bodies, and toggle **VRPN/NatNet streaming** — so the **Unitree H1-2
-pelvis pose** can be streamed into the MJPC controller (`rt/sportmodestate`).
+Stream the **H1-2 pelvis pose** from the lab's **OptiTrack Motive** system onto the robot's
+DDS as `rt/sportmodestate`, so the MJPC controller gets a ground-truth base pose/velocity.
 
-## How it works
+## The simple way: one file
+
+**`publish_sportmodestate.py`** does the whole job in a single script — reads the pelvis
+rigid body from Motive, converts it to the robot world frame, and publishes `rt/sportmodestate`.
+No server, no extra processes.
 
 ```
-  Linux laptop (IRLab 192.168.50.x)            Windows OptiTrack PC (192.168.50.44)
-  ┌───────────────────────────┐   HTTP/MCP    ┌──────────────────────────────────┐
-  │ Claude Code  ── motive ───────────────────►│ motive_mcp_server.py (FastMCP)   │
-  │ tools (this plugin)        │  :8765/mcp    │   └ ctypes → NPTrackingToolsx64.dll│
-  └───────────────────────────┘               │        └ Motive engine + cameras  │
-                                              └──────────────────────────────────┘
-                              VRPN :3883  →  OptiTrack→DDS bridge (laptop)  →  rt/sportmodestate → MJPC
+   Motive (cameras + cal)  ──►  publish_sportmodestate.py  ──►  rt/sportmodestate (DDS)  ──►  MJPC node
+        NPTrackingTools DLL          read → convert → publish
 ```
 
-The MCP **server runs on the Windows PC** (it needs the cameras + DLL locally). Claude connects to
-it **remotely over HTTP**. The server wraps the Motive 2.2 C API via **ctypes — no compiler needed**.
+### Run it
+1. **Where:** on a machine that has **Motive installed** *and* a **route to the robot's DDS
+   network** (`192.168.123.x`) — normally the Motive PC. Close the Motive **GUI** first
+   (the API takes the cameras).
+2. **Install the one dependency** (from source — it's not a clean PyPI package):
+   `git clone https://github.com/unitreerobotics/unitree_sdk2_python && cd unitree_sdk2_python && pip install -e .`
+   (pulls in the `cyclonedds` bindings; on Windows you also need the native CycloneDDS lib + `CYCLONEDDS_HOME`).
+3. **Edit the CONFIG block** at the top of `publish_sportmodestate.py` (it's all right there):
 
-## Scope (what it does / doesn't)
+   | Field | What to put |
+   |---|---|
+   | `MOTIVE_DIR` | Motive install folder (has `lib\NPTrackingToolsx64.dll`) |
+   | `CALIBRATION` | path to the `.cal` calibration file **(required)** |
+   | `PROFILE` | path to a `.motive` that contains the rigid body *(optional — leave `""` if the body is already in Motive's loaded project)* |
+   | `RIGID_BODY` | the rigid-body name, e.g. `h1_2_pelvis` |
+   | `DDS_INTERFACE` | the NIC name or IP on the robot's `192.168.123.x` network *(`""` = auto-detect)* |
+   | `DDS_DOMAIN` / `OUT_TOPIC` | `0` / `rt/sportmodestate` for the real robot |
+   | `AXIS_MAP`, `IMU_OFFSET_M`, `RATE_HZ` | H1-2 defaults — usually leave as-is |
 
-- ✅ Load calibration (`.cal`) and profiles (`.motive`); manage rigid bodies (add/create/enable);
-  set frame rate; **enable VRPN/NatNet streaming**; read live pose + status.
-- ⛔ **No wand calibration** — Motive 2.2 doesn't expose it through the API. Calibrate in the GUI,
-  export the `.cal`, load it here. (The rig is already calibrated to 0.379 mm.)
+4. **Run:** `python publish_sportmodestate.py` → it prints the live pose and publishes.
+   `Ctrl+C` to stop (it releases the cameras).
 
-## Components
+### Verify
+- On the robot-network box: `dds_topic_check.py --topics rt/sportmodestate` → should read
+  ARRIVING / finite.
+- **Axis check (do once):** move the robot **+1 m forward** → published `x` should rise ~1;
+  **lift 0.5 m** → `z` should rise ~0.5. If a sign is wrong, fix `AXIS_MAP` (e.g. `x,y,z`,
+  `-x,-z,y`, …) and re-check.
 
-| Path | What |
-|---|---|
-| `server/motive_api.py` | ctypes binding to `NPTrackingToolsx64.dll` (signatures from the on-disk 2.2 header) |
-| `server/motive_mcp_server.py` | FastMCP server exposing the tools over HTTP; `--selftest` mode |
-| `server/run_server.ps1` | Windows launcher (closes-GUI pre-flight, prints the connect URL) |
-| `.mcp.json` | Registers the remote `motive` HTTP server (edit the IP if DHCP moved it) |
-| `skills/motive-deploy` | Windows setup: install Python, run the server, connect Claude |
-| `skills/motive-workflow` | Tool sequence + H1-2 rigid-body/frame conventions |
+### Prerequisites in Motive (one-time, in the GUI)
+The calibration and the rigid body have to exist before the script can use them:
+1. Calibrate (or load an existing `.cal`) and set the ground plane.
+2. Stick markers on the pelvis, create a rigid body, name it `h1_2_pelvis`.
+3. *(Optional)* Save a `.motive` profile and point `PROFILE` at it — otherwise make sure the
+   body is in the project Motive auto-loads, and just set `CALIBRATION`.
 
-## MCP tools
+---
 
-`initialize` · `status` · `load_calibration` · `load_profile` · `list_rigid_bodies` ·
-`load_rigid_bodies` · `create_rigid_body` · `set_rigid_body_enabled` · `rigid_body_pose` ·
-`set_frame_rate` · `enable_vrpn` / `disable_vrpn` · `enable_natnet` / `disable_natnet` · `shutdown`
+## Optional: the MCP server (agent-driven / remote control)
 
-## Prerequisites (Windows PC)
+`server/` contains an **MCP server** that exposes Motive control as tools over HTTP — useful
+when you want **Claude (or another agent) to drive Motive remotely**: load calibration, read
+markers, create the rigid body, check tracking, all headless from another machine. It's how
+this setup was brought up and validated. It is **not required** for the publisher above.
 
-- Motive 2.2 with the API DLL at `C:\Program Files\OptiTrack\Motive\lib\NPTrackingToolsx64.dll` ✓
-- 64-bit Python (per-user install, no admin) + `mcp[cli]`
-- Motive GUI **closed** while the server runs (the API owns the cameras)
+- `server/motive_api.py` — full ctypes binding to `NPTrackingToolsx64.dll`
+- `server/motive_mcp_server.py` — FastMCP server (`--selftest` to validate the DLL binding)
+- `server/run_server.ps1` — Windows launcher · `.mcp.json` — remote-server registration
+- Drive it from another machine with `dds_tools/motive_cli.py` (in the h12 repo).
 
-## Install / run
+## Repo layout
+```
+publish_sportmodestate.py   ← the one-file publisher (start here)
+server/                     ← optional MCP server for agent-driven remote control
+skills/                     ← Claude Code skills (deploy + workflow)
+bridge/optitrack_bridge/    ← earlier standalone-bridge scaffold (reference; will be generalized later)
+```
 
-See the **motive-deploy** skill (or `skills/motive-deploy/SKILL.md`). Short version:
-1. Per-user Python + `pip install --user "mcp[cli]"`.
-2. Copy `server/` to the PC → `python motive_mcp_server.py --selftest`.
-3. `.\run_server.ps1` → note the printed `http://<ip>:8765/mcp`.
-4. Laptop: `claude mcp add --transport http motive http://<ip>:8765/mcp`.
-
-## ✅ Status: hardware-validated (selftest PASS, 2026-06-17)
-
-`--selftest` **PASSED on the lab's OptiTrack PC**: DLL loaded (build 48012), `TT_Initialize` OK,
-**5× Prime 17W @ 360 Hz** enumerated (#32710–32716), 38 existing rigid bodies listed. The
-ctypes↔DLL binding and engine init are confirmed on the real system. The Qt platform-plugin path is
-auto-resolved — on this install it lives at `…\Motive\assemblies\x64\platforms`.
-
-Still unverified end-to-end: the running HTTP server + live tool calls, VRPN/NatNet streaming
-reachability on the IRLab interface, and the OptiTrack→DDS bridge. Next: run the server and connect.
-
-## Operator gates (confirm before first deploy)
-
-1. Closing the Motive GUI during server sessions is acceptable.
-2. Clearance to install per-user Python + run a server on the shared ARPG machine.
-3. Scope = rigid-body + streaming control (no automated wanding). 
-4. Motive edition/license includes the API (verify if `TT_Initialize` returns a license error).
-
-## Security
-
-No credentials. The server exposes camera/streaming control on a LAN port — the Windows firewall is
-currently off, so anyone on IRLab could reach it. For a shared lab, prefer binding to a specific
-interface or adding a firewall rule scoped to the laptop's IP once it's in regular use.
+## Notes
+- **Accuracy:** `AXIS_MAP` + `IMU_OFFSET_M` are H1-2 defaults; validate the axes with the motion
+  test. The published height is exact only when the rigid-body frame is aligned and the offset
+  is right — fine for bring-up, tighten later if needed.
+- **Network:** keep Tailscale down during DDS runs; the publisher's host must reach
+  `192.168.123.x`. In debug mode the robot publishes nothing on `rt/sportmodestate`, so this
+  script is what fills it.
