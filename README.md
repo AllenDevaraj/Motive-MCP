@@ -18,9 +18,18 @@ No server, no extra processes.
 1. **Where:** on a machine that has **Motive installed** *and* a **route to the robot's DDS
    network** (`192.168.123.x`) — normally the Motive PC. Close the Motive **GUI** first
    (the API takes the cameras).
-2. **Install the one dependency** (from source — it's not a clean PyPI package):
-   `git clone https://github.com/unitreerobotics/unitree_sdk2_python && cd unitree_sdk2_python && pip install -e .`
-   (pulls in the `cyclonedds` bindings; on Windows you also need the native CycloneDDS lib + `CYCLONEDDS_HOME`).
+2. **Install the Python env (one command).** The SDK's only tricky dependency is CycloneDDS.
+   From the repo root, in PowerShell:
+   ```powershell
+   powershell -NoProfile -ExecutionPolicy Bypass -File .\install_windows.ps1
+   ```
+   This installs Python 3.10 (if missing), makes a `.venv`, installs the vendored
+   `unitree_sdk2_python` + CycloneDDS from the official `0.10.2` wheel, and smoke-tests a
+   publish. **See [WINDOWS_INSTALL.md](WINDOWS_INSTALL.md)** for what it does, the manual steps,
+   the `-Mode community` (keep your Python 3.11/3.12) and `-Mode native` fallbacks, and
+   troubleshooting. *(Why a script: `cyclonedds==0.10.2` has no Windows wheel for Python 3.11+,
+   so a plain `pip install` on Store Python 3.12 fails — the script picks an interpreter that
+   has a prebuilt wheel.)*
 3. **Edit the CONFIG block** at the top of `publish_sportmodestate.py` (it's all right there):
 
    | Field | What to put |
@@ -33,8 +42,8 @@ No server, no extra processes.
    | `DDS_DOMAIN` / `OUT_TOPIC` | `0` / `rt/sportmodestate` for the real robot |
    | `AXIS_MAP`, `IMU_OFFSET_M`, `RATE_HZ` | H1-2 defaults — usually leave as-is |
 
-4. **Run:** `python publish_sportmodestate.py` → it prints the live pose and publishes.
-   `Ctrl+C` to stop (it releases the cameras).
+4. **Run:** `.\.venv\Scripts\python.exe publish_sportmodestate.py` → it prints the live pose
+   and publishes. `Ctrl+C` to stop (it releases the cameras).
 
 ### Verify
 - On the robot-network box: `dds_topic_check.py --topics rt/sportmodestate` → should read
