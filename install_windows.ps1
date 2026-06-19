@@ -100,9 +100,10 @@ function New-VenvAndInstall([string]$basePy, [string]$preWheelUrl){
 }
 
 function Verify-Stack {
-  $cv = (& $VPy -c "import cyclonedds;print(cyclonedds.__version__)").Trim()
+  $cv = (& $VPy -c "from importlib.metadata import version; print(version('cyclonedds'))" 2>$null)
+  if ($cv) { $cv = ($cv | Select-Object -First 1).Trim() } else { $cv = 'unknown' }
   Info "cyclonedds installed: $cv"
-  if ($cv -ne '0.10.2') { Warn "cyclonedds is $cv, not the pinned 0.10.2 - vendored IDL is only guaranteed against 0.10.2." }
+  if ($cv -ne '0.10.2' -and $cv -ne 'unknown') { Warn "cyclonedds is $cv, not the pinned 0.10.2 - vendored IDL is only guaranteed against 0.10.2." }
   Info 'Checking the load-bearing IDL imports (the thing that was failing)...'
   & $VPy -c "from cyclonedds.idl import IdlStruct; from cyclonedds.domain import DomainParticipant; from unitree_sdk2py.idl.unitree_go.msg.dds_ import SportModeState_; print('IDL import OK')"
   if ($LASTEXITCODE -ne 0) { throw 'IDL import failed.' }
@@ -222,7 +223,8 @@ function Try-Native {
   & $cur -m venv $Venv
   & $VPy -m pip install --upgrade pip
   & $VPy -m pip install "cyclonedds==0.10.2" --no-binary cyclonedds
-  $cv = (& $VPy -c "import cyclonedds;print(cyclonedds.__version__)").Trim()
+  $cv = (& $VPy -c "from importlib.metadata import version; print(version('cyclonedds'))" 2>$null)
+  if ($cv) { $cv = ($cv | Select-Object -First 1).Trim() }
   if ($cv -ne '0.10.2') { throw "built cyclonedds is $cv, expected 0.10.2 (C-tag mismatch - re-checkout tag 0.10.2)." }
   & $VPy -m pip install -e $Sdk --no-deps
   & $VPy -m pip install numpy opencv-python
