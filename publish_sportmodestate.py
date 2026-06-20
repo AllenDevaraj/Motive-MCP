@@ -11,8 +11,11 @@ WHAT IT DOES
 WHERE TO RUN IT
     On a machine that has BOTH:
       (1) Motive installed (the NPTrackingToolsx64.dll + the cameras), AND
-      (2) a network route to the robot's DDS network (192.168.123.x).
-    Normally that is the Motive PC, with the robot reachable from it.
+      (2) a route to the robot's DDS network (192.168.123.x) -- via a wired ethernet link
+          into the robot's onboard switch, OR by joining the robot's own WiFi (it hands the
+          PC a 192.168.123.x address). Either way the PC ends up on the DDS subnet.
+    Normally that is the Motive PC, with the robot reachable from it. NOTE: the network
+    interface is chosen at STARTUP, so if you change networks, RESTART this script.
     The Motive GUI must be CLOSED while this runs (the API takes the cameras).
 
 HOW TO RUN IT
@@ -55,7 +58,9 @@ CONFIG = {
     #   ^ The NIC on the robot's network, as an IP (recommended, esp. on Windows, e.g.
     #     "192.168.123.222") or a Linux interface name (e.g. "enp3s0").
     #     Leave "" to auto-detect this machine's 192.168.123.x IP (and WARN if there's no
-    #     route to the robot). This machine MUST be able to reach 192.168.123.x.
+    #     route to the robot). This machine MUST be able to reach 192.168.123.x -- via a
+    #     wired link to the robot, or by joining the robot's WiFi (gives a 192.168.123.x IP).
+    #     The interface is picked at STARTUP, so if you switch networks, RESTART this script.
 
     "DDS_DOMAIN":   0,            # robot DDS domain (0 for the real H1-2)
     "OUT_TOPIC":    "rt/sportmodestate",

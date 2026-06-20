@@ -118,12 +118,26 @@ powershell -NoProfile -ExecutionPolicy Bypass -File .\install_windows.ps1 -Mode 
 
 ---
 
+## Putting the PC on the robot's network
+
+The publisher must run on a machine that's on the robot's DDS subnet (`192.168.123.x`). Two ways:
+
+1. **Wired (most reliable).** A USB-ethernet adapter on the PC → into the robot's onboard
+   network switch → static `192.168.123.x` (e.g. `.222`). DDS is happiest on wired.
+2. **Robot's WiFi.** Joining the robot's own WiFi hands the PC a `192.168.123.x` address (so it
+   *is* on the DDS subnet). Convenient, but DDS **discovery is multicast**, which WiFi can drop
+   or block — so after connecting, verify the topic actually arrives (below), don't assume it.
+
+Either way, leave `DDS_INTERFACE = ""` and the publisher auto-detects the `192.168.123.x` IP at
+startup. **The interface is chosen at startup — if you switch networks, restart the publisher.**
+Unitree's own SDK docs specify **ethernet** for low-level DDS; treat WiFi as best-effort.
+
 ## Loopback vs. the real robot
 
 The installer's smoke test calls `ChannelFactoryInitialize(0)` (default/loopback) — it proves
-the DDS stack imports and publishes, **not** that the robot is reachable. To publish to the real
-robot, set `DDS_INTERFACE` in `publish_sportmodestate.py` to your robot-network NIC (the
-`192.168.123.x` adapter) — the publisher passes it to `ChannelFactoryInitialize`.
+the DDS stack imports and publishes, **not** that the robot is reachable. To confirm the real
+path, on a machine on the robot subnet run `dds_topic_check.py` and check `rt/sportmodestate`
+shows up next to `rt/lowstate`.
 
 ## Version summary (what the installer pins, and why)
 
