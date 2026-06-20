@@ -83,7 +83,8 @@ CONFIG = {
     #   ^ pelvis-origin -> IMU site, in the pelvis body frame (matches the controller).
     #     Set to (0, 0, 0) if the rigid-body PIVOT was placed AT the IMU site.
 
-    "RATE_HZ":       100,         # publish rate (Windows timer granularity may cap the effective rate)
+    "RATE_HZ":       200,         # publish rate Hz (cameras run 360Hz; timeBeginPeriod(1) lets the
+    #                               Windows pacer hit ~200Hz. Drop to 100 if your box can't sustain it.)
     "VEL_LOWPASS_MS": 30,         # velocity low-pass time constant (ms)
 }
 # ==========================================================================================

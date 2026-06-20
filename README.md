@@ -40,7 +40,9 @@ No server, no extra processes.
    | `RIGID_BODY` | the rigid-body name, e.g. `h1_2_pelvis` |
    | `DDS_INTERFACE` | the NIC name or IP on the robot's `192.168.123.x` network *(`""` = auto-detect)* |
    | `DDS_DOMAIN` / `OUT_TOPIC` | `0` / `rt/sportmodestate` for the real robot |
-   | `AXIS_MAP`, `IMU_OFFSET_M`, `RATE_HZ` | H1-2 defaults — usually leave as-is |
+   | `UDP_SINK` | `""` for direct DDS; `"<bridge-ip>:9870"` for the WiFi/UDP-bridge mode (see **Network setup**) |
+   | `AXIS_MAP`, `IMU_OFFSET_M` | H1-2 frame defaults — usually leave as-is |
+   | `RATE_HZ` | publish rate, default `200` (cameras run 360 Hz; drop to `100` if the PC can't sustain it) |
 
 4. **Run:** `.\.venv\Scripts\python.exe publish_sportmodestate.py` → it prints the live pose
    and publishes. `Ctrl+C` to stop (it releases the cameras).
@@ -51,6 +53,38 @@ No server, no extra processes.
 - **Axis check (do once):** move the robot **+1 m forward** → published `x` should rise ~1;
   **lift 0.5 m** → `z` should rise ~0.5. If a sign is wrong, fix `AXIS_MAP` (e.g. `x,y,z`,
   `-x,-z,y`, …) and re-check.
+
+### Network setup — which device on which network
+
+The robot's real-time DDS (`rt/lowstate`, `rt/lowcmd` ~500 Hz, and the `rt/sportmodestate` slot
+we fill) lives on the robot's **wired `192.168.123.x`** network (its onboard switch). That's the
+bus the MJPC controller reads, so `rt/sportmodestate` has to land there.
+
+| Device | Network(s) | Runs |
+|---|---|---|
+| **Robot** | wired `192.168.123.x` (onboard switch) | publishes `lowstate`/`lowcmd`; `sportmodestate` is silent in debug mode |
+| **Motive PC** | a route to `192.168.123.x` — a wired NIC into the robot switch, **or** the robot's own WiFi (it hands out a `192.168.123.x` IP); **plus** the camera net (`169.254.x`, wired to the cameras) | Motive + `publish_sportmodestate.py` |
+| **Bridge / controller box** (e.g. the laptop) | **wired** `192.168.123.x` into the robot switch (+ WiFi for reaching the PC) | `pose_udp_bridge.py` + the MJPC node *(bridge mode only)* |
+
+**Two ways to run, by how the Motive PC reaches the robot net:**
+
+- **Direct DDS (preferred).** The Motive PC has a **wired** NIC on `192.168.123.x` (a USB-ethernet
+  adapter into the robot's switch). `publish_sportmodestate.py` publishes DDS straight on the wire.
+  Leave `DDS_INTERFACE=""` (auto-detect) and `UDP_SINK=""`. No bridge needed.
+
+- **UDP bridge (when the PC reaches the robot only over WiFi).** DDS discovery is **multicast**,
+  which WiFi APs block — so direct DDS won't cross WiFi (verified on both the lab WiFi and the
+  robot's own WiFi). **Unicast** does cross, so route the pose over UDP to a box that's **wired**
+  to the robot net, and let that box put it on DDS:
+  1. On the Motive PC, set `UDP_SINK = "<bridge-ip>:9870"` (the wired box's `192.168.123.x` IP).
+  2. On the wired box, run `python pose_udp_bridge.py --iface <robot-net-NIC> --port 9870`.
+
+  The PC and the bridge box only need to reach each other by **unicast** (same WiFi, or via the
+  robot's WiFi↔wired bridge); the bridge box must be **wired** to `192.168.123.x`.
+
+  ```
+  Motive PC (WiFi)  ──unicast UDP──►  pose_udp_bridge.py (wired 192.168.123.x)  ──DDS──►  rt/sportmodestate
+  ```
 
 ### Prerequisites in Motive (one-time, in the GUI)
 The calibration and the rigid body have to exist before the script can use them:
@@ -75,7 +109,8 @@ this setup was brought up and validated. It is **not required** for the publishe
 
 ## Repo layout
 ```
-publish_sportmodestate.py   ← the one-file publisher (start here)
+publish_sportmodestate.py   ← the one-file publisher (start here; runs on the Motive PC)
+pose_udp_bridge.py          ← UDP→DDS bridge for WiFi mode (runs on the box wired to the robot)
 server/                     ← optional MCP server for agent-driven remote control
 skills/                     ← Claude Code skills (deploy + workflow)
 bridge/optitrack_bridge/    ← earlier standalone-bridge scaffold (reference; will be generalized later)
@@ -85,6 +120,7 @@ bridge/optitrack_bridge/    ← earlier standalone-bridge scaffold (reference; w
 - **Accuracy:** `AXIS_MAP` + `IMU_OFFSET_M` are H1-2 defaults; validate the axes with the motion
   test. The published height is exact only when the rigid-body frame is aligned and the offset
   is right — fine for bring-up, tighten later if needed.
-- **Network:** keep Tailscale down during DDS runs; the publisher's host must reach
-  `192.168.123.x`. In debug mode the robot publishes nothing on `rt/sportmodestate`, so this
-  script is what fills it.
+- **Network:** keep Tailscale down during DDS runs. The publisher's host must reach the robot's
+  `192.168.123.x` net (see **Network setup**). DDS does **not** cross WiFi (discovery is multicast,
+  which APs block) — if the Motive PC is on WiFi, use the `UDP_SINK` + `pose_udp_bridge.py` path.
+  In debug mode the robot publishes nothing on `rt/sportmodestate`, so this script fills it.
