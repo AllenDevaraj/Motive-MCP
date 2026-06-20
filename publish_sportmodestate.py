@@ -65,6 +65,14 @@ CONFIG = {
     "DDS_DOMAIN":   0,            # robot DDS domain (0 for the real H1-2)
     "OUT_TOPIC":    "rt/sportmodestate",
 
+    "UDP_SINK":     "",
+    #   ^ OPTIONAL no-wire fallback. If this PC can only reach the robot over WiFi, DDS won't
+    #     get through (DDS discovery is multicast, which WiFi APs block). Set this to
+    #     "<laptop-ip>:<port>" (e.g. "192.168.123.4:9870") and the pose is ALSO sent there by
+    #     unicast UDP, which DOES cross WiFi. Run dds_tools/pose_udp_bridge.py on that laptop
+    #     (it's on the robot's WIRED net) to put it on DDS next to lowstate. Leave "" for the
+    #     normal direct-DDS path (preferred -- wire this PC to the robot instead).
+
     # ---- H1-2 FRAME / OFFSET (correct H1-2 defaults; usually leave as-is) --------------
     "AXIS_MAP":      "x,-z,y",
     #   ^ Motive is Y-up; the robot world is Z-up, floor z=0, +x forward.
@@ -382,6 +390,16 @@ def main():
         pub.Init()
         msg = unitree_go_msg_dds__SportModeState_()
 
+        # Optional unicast UDP sink: pose ALSO goes here, which crosses WiFi where DDS multicast
+        # can't. A pose_udp_bridge.py on the wired-robot laptop turns it back into DDS.
+        import socket as _socket, struct as _struct
+        udp_sock = udp_addr = None
+        if cfg["UDP_SINK"].strip():
+            _host, _, _port = cfg["UDP_SINK"].strip().rpartition(":")
+            udp_addr = (_host, int(_port))
+            udp_sock = _socket.socket(_socket.AF_INET, _socket.SOCK_DGRAM)
+            print(f"[publisher] ALSO sending pose by unicast UDP -> {_host}:{_port}", flush=True)
+
         fd = VelocityFD(cfg["VEL_LOWPASS_MS"] * 1e-3)
         print(f"[publisher] PUBLISHING '{cfg['OUT_TOPIC']}' @ {rate:.0f} Hz  (Ctrl+C to stop)\n", flush=True)
 
@@ -409,6 +427,9 @@ def main():
                     msg.position[k] = float(site[k])
                     msg.velocity[k] = float(v[k])
                 pub.Write(msg)
+                if udp_sock is not None:
+                    udp_sock.sendto(b"MCAP" + _struct.pack("<7d", now, site[0], site[1], site[2],
+                                                            v[0], v[1], v[2]), udp_addr)
                 n += 1
                 if n % period == 0:
                     print(f"[publisher] {now - t0:6.1f}s  pos=[{site[0]:+.3f},{site[1]:+.3f},{site[2]:+.3f}]"
