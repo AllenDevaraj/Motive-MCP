@@ -74,7 +74,7 @@ CONFIG = {
     "DDS_DOMAIN":   0,            # robot DDS domain (0 for the real H1-2)
     "OUT_TOPIC":    "rt/sportmodestate",
 
-    "UDP_SINK":     "",
+    "UDP_SINK":     "192.168.123.4:9870",
     #   ^ OPTIONAL no-wire fallback. If this PC can only reach the robot over WiFi, DDS won't
     #     get through (DDS discovery is multicast, which WiFi APs block). Set this to
     #     "<laptop-ip>:<port>" (e.g. "192.168.123.4:9870") and the pose is ALSO sent there by
