@@ -352,18 +352,32 @@ def main():
         # --- DDS publisher ---
         iface = cfg["DDS_INTERFACE"].strip()
         if not iface:
-            iface = _auto_iface_ip() or ""
-            if iface:
+            detected = _auto_iface_ip()
+            if detected:
+                iface = detected
                 print(f"[publisher] auto-detected robot-subnet IP: {iface}", flush=True)
             else:
                 print("[publisher] WARNING: no 192.168.123.x route on this machine -- DDS may not reach "
-                      "the robot. Set DDS_INTERFACE to this PC's robot-subnet IP.", flush=True)
+                      "the robot. Connect to the robot (wired, or its WiFi) so this PC gets a "
+                      "192.168.123.x address.", flush=True)
+        # Bind the chosen interface. Passing an IP works on Linux, but Windows CycloneDDS often
+        # rejects it ("<ip>: does not match an available interface") -- so fall back to
+        # auto-determine, which lets CycloneDDS pick the NIC itself (it prefers a real subnet like
+        # the robot's 192.168.123.x over the link-local 169.254.x camera net). A failed bind does
+        # NOT create the domain, so the retry is safe in-process.
+        bound = False
         if iface:
-            ChannelFactoryInitialize(cfg["DDS_DOMAIN"], iface)
-            print(f"[publisher] DDS domain {cfg['DDS_DOMAIN']} on interface '{iface}'", flush=True)
-        else:
+            try:
+                ChannelFactoryInitialize(cfg["DDS_DOMAIN"], iface)
+                print(f"[publisher] DDS domain {cfg['DDS_DOMAIN']} on interface '{iface}'", flush=True)
+                bound = True
+            except Exception as e:
+                print(f"[publisher] could not bind interface '{iface}' ({e}); "
+                      "falling back to auto-determine.", flush=True)
+        if not bound:
             ChannelFactoryInitialize(cfg["DDS_DOMAIN"])
-            print(f"[publisher] DDS domain {cfg['DDS_DOMAIN']} (interface auto-detect)", flush=True)
+            print(f"[publisher] DDS domain {cfg['DDS_DOMAIN']} (auto-determine -- CycloneDDS picks the NIC)",
+                  flush=True)
         pub = ChannelPublisher(cfg["OUT_TOPIC"], SportModeState_)
         pub.Init()
         msg = unitree_go_msg_dds__SportModeState_()
