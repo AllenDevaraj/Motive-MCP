@@ -32,6 +32,15 @@ NOTE ON ACCURACY
     Frame (AXIS_MAP) and the pelvis->IMU offset are H1-2 defaults. Validate the
     axes once with a motion test (move the robot +1 m forward -> world x +1; lift
     0.5 m -> world z +0.5) and adjust AXIS_MAP if a sign is wrong.
+
+NOTE ON GLITCHES
+    A single bad rigid-body solve (marker swap/occlusion) can pop the pose a few cm
+    for ONE frame; finite-differenced, that is a phantom 1-5 m/s velocity spike on the
+    wire -- which a balance controller would chase as real motion. The OUTLIER GATE
+    (CONFIG block) rejects such frames and re-publishes the last good pose instead.
+    Measured on the real H1-2: ~6 such pops/min; with the gate on they never reach the
+    controller. A jump sustained past OUTLIER_HOLD_MAX frames is taken as real motion
+    and accepted, so the gate can never freeze the feed.
 """
 
 # ==========================================================================================
@@ -86,6 +95,14 @@ CONFIG = {
     "RATE_HZ":       200,         # publish rate Hz (cameras run 360Hz; timeBeginPeriod(1) lets the
     #                               Windows pacer hit ~200Hz. Drop to 100 if your box can't sustain it.)
     "VEL_LOWPASS_MS": 30,         # velocity low-pass time constant (ms)
+
+    # ---- OUTLIER GATE (drop glitchy rigid-body solves -- see NOTE ON GLITCHES above) ----
+    "OUTLIER_MAX_SPEED":  2.0,    # reject a frame whose implied base speed exceeds this (m/s); 0 = off.
+    #                               A 1-frame solve glitch implies many m/s; real base motion is < ~1 m/s.
+    "OUTLIER_MAX_ERR_MM": 0.0,    # ALSO reject if the rigid-body mean error exceeds this (mm); 0 = off.
+    #                               Secondary check (the speed gate is primary); cal baseline ~0.38 mm.
+    "OUTLIER_HOLD_MAX":   5,      # after this many CONSECUTIVE rejects, accept anyway + reset velocity
+    #                               (a sustained jump = real motion / teleport, not a 1-frame glitch).
 }
 # ==========================================================================================
 #  END CONFIG  --  you shouldn't need to edit anything below this line.
@@ -402,6 +419,26 @@ def main():
             print(f"[publisher] ALSO sending pose by unicast UDP -> {_host}:{_port}", flush=True)
 
         fd = VelocityFD(cfg["VEL_LOWPASS_MS"] * 1e-3)
+        # Outlier gate state: a single bad rigid-body solve pops the pose for one frame -> a
+        # phantom 1-5 m/s velocity spike when differenced. Reject + hold the last good pose.
+        gate_speed = float(cfg.get("OUTLIER_MAX_SPEED", 0.0))
+        gate_err   = float(cfg.get("OUTLIER_MAX_ERR_MM", 0.0))
+        gate_hold  = int(cfg.get("OUTLIER_HOLD_MAX", 5))
+        last_p, last_t, last_v = None, None, [0.0, 0.0, 0.0]
+        n_reject_run = n_reject_total = 0
+        if gate_speed > 0 or gate_err > 0:
+            print(f"[publisher] OUTLIER GATE on: reject if speed>{gate_speed:.1f}m/s"
+                  + (f" or err>{gate_err:.1f}mm" if gate_err > 0 else "")
+                  + f" -> hold last good (<= {gate_hold} in a row, then accept as real motion)", flush=True)
+
+        def _emit(pos, vel):                       # publish one (pos, vel) sample to DDS (+ UDP sink)
+            for k in range(3):
+                msg.position[k] = float(pos[k]); msg.velocity[k] = float(vel[k])
+            pub.Write(msg)
+            if udp_sock is not None:
+                udp_sock.sendto(b"MCAP" + _struct.pack("<7d", now, pos[0], pos[1], pos[2],
+                                                        vel[0], vel[1], vel[2]), udp_addr)
+
         print(f"[publisher] PUBLISHING '{cfg['OUT_TOPIC']}' @ {rate:.0f} Hz  (Ctrl+C to stop)\n", flush=True)
 
         n, n_untracked, t0, next_t = 0, 0, time.time(), time.time()
@@ -421,20 +458,42 @@ def main():
                 if n_untracked:                    # tracking just resumed
                     n_untracked = 0
                     fd.prev_p = None               # reset FD so the first post-gap sample isn't a jump
+                    last_p = None                  # don't gate the re-acquired pose against a stale sample
                 pos_m, quat = mot.location(idx)
                 site = site_world(pos_m, quat, offset, S)
+
+                # --- outlier gate: drop glitch frames so a bad solve can't inject a phantom spike ---
+                reject, reason = False, ""
+                if gate_err > 0.0:
+                    err_mm = mot.mean_error_mm(idx)
+                    if err_mm > gate_err:
+                        reject, reason = True, f"err {err_mm:.1f}>{gate_err:.1f}mm"
+                if not reject and gate_speed > 0.0 and last_p is not None:
+                    d = math.sqrt(sum((site[k] - last_p[k]) ** 2 for k in range(3)))
+                    gap = now - last_t
+                    if gap > 1e-6 and d / gap > gate_speed:
+                        reject, reason = True, f"jump {d*100:.1f}cm/{gap*1e3:.0f}ms={d/gap:.1f}m/s"
+                if reject and n_reject_run < gate_hold:
+                    n_reject_run += 1; n_reject_total += 1
+                    if last_p is not None:         # hold last good pose -> no phantom spike downstream
+                        _emit(last_p, last_v)
+                    if n_reject_total % period == 1:
+                        print(f"[publisher] OUTLIER rejected ({reason}) -> holding ({n_reject_total} total)", flush=True)
+                    continue
+                if reject:                         # gate_hold in a row -> sustained = real motion, accept + reset FD
+                    fd.prev_p = None
+                    print(f"[publisher] outlier persisted {gate_hold} frames -> accepting as real motion (FD reset)", flush=True)
+                n_reject_run = 0
+                # ------------------------------------------------------------------------------------
+
                 v = fd.update(site, now)
-                for k in range(3):
-                    msg.position[k] = float(site[k])
-                    msg.velocity[k] = float(v[k])
-                pub.Write(msg)
-                if udp_sock is not None:
-                    udp_sock.sendto(b"MCAP" + _struct.pack("<7d", now, site[0], site[1], site[2],
-                                                            v[0], v[1], v[2]), udp_addr)
+                _emit(site, v)
+                last_p, last_t, last_v = list(site), now, list(v)
                 n += 1
                 if n % period == 0:
                     print(f"[publisher] {now - t0:6.1f}s  pos=[{site[0]:+.3f},{site[1]:+.3f},{site[2]:+.3f}]"
-                          f"  vel=[{v[0]:+.3f},{v[1]:+.3f},{v[2]:+.3f}]  err={mot.mean_error_mm(idx):.2f}mm", flush=True)
+                          f"  vel=[{v[0]:+.3f},{v[1]:+.3f},{v[2]:+.3f}]  err={mot.mean_error_mm(idx):.2f}mm"
+                          + (f"  rej={n_reject_total}" if n_reject_total else ""), flush=True)
             except Exception as e:                 # one transient Motive/DDS hiccup shouldn't kill the feed
                 print(f"[publisher] transient error: {e} -- continuing", flush=True)
                 time.sleep(0.05)
