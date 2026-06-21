@@ -33,7 +33,7 @@ already calibrated). Your job is the software side around that.
    `h1_2_pelvis@tcp://<motive-pc-ip>:3883` → `rt/sportmodestate`.
 7. When done: `shutdown()` (releases cameras so the GUI can reopen).
 
-## H1-2 conventions (must match the controller — see OPTITRACK_HANDOFF.md)
+## H1-2 conventions (must match the controller)
 
 - **Rigid-body name:** `h1_2_pelvis`.
 - **Tracked point = the pelvis IMU site.** Set the rigid-body pivot at the physical IMU so the

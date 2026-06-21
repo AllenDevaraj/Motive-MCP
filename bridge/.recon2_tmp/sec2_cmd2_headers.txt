@@ -1,8 +1,0 @@
-﻿
-Name               
-----               
-RigidBodySolver    
-NPTrackingTools.h  
-RigidBodySettings.h
-
-

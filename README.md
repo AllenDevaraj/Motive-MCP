@@ -95,25 +95,22 @@ The calibration and the rigid body have to exist before the script can use them:
 
 ---
 
-## Optional: the MCP server (agent-driven / remote control)
+## Optional: agent-driven control (`mcp-server/`)
 
-`server/` contains an **MCP server** that exposes Motive control as tools over HTTP — useful
-when you want **Claude (or another agent) to drive Motive remotely**: load calibration, read
-markers, create the rigid body, check tracking, all headless from another machine. It's how
-this setup was brought up and validated. It is **not required** for the publisher above.
-
-- `server/motive_api.py` — full ctypes binding to `NPTrackingToolsx64.dll`
-- `server/motive_mcp_server.py` — FastMCP server (`--selftest` to validate the DLL binding)
-- `server/run_server.ps1` — Windows launcher · `.mcp.json` — remote-server registration
-- Drive it from another machine with `dds_tools/motive_cli.py` (in the h12 repo).
+Everything needed to stream the pose is above — you can ignore this section. If you *also*
+want **Claude (or another agent) to drive Motive remotely** (load calibration, create the
+rigid body, toggle streaming, check tracking, all headless), that lives entirely in
+**[`mcp-server/`](mcp-server/)** — a self-contained Claude Code plugin + MCP server. It's
+optional and fully separate from the publisher path; see
+[`mcp-server/README.md`](mcp-server/README.md).
 
 ## Repo layout
 ```
 publish_sportmodestate.py   ← the one-file publisher (start here; runs on the Motive PC)
 pose_udp_bridge.py          ← UDP→DDS bridge for WiFi mode (runs on the box wired to the robot)
-server/                     ← optional MCP server for agent-driven remote control
-skills/                     ← Claude Code skills (deploy + workflow)
-bridge/optitrack_bridge/    ← earlier standalone-bridge scaffold (reference; will be generalized later)
+install_windows.ps1         ← one-command Windows install (Python 3.10 + CycloneDDS + SDK)
+unitree_sdk2_python/        ← vendored Unitree SDK (the installer installs this for you)
+mcp-server/                 ← OPTIONAL agent-driven Motive control (ignore for the basic flow)
 ```
 
 ## Notes

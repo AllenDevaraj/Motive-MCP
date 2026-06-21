@@ -1,3 +1,9 @@
 __pycache__/
 *.pyc
 .claude/*.local.md
+
+# created by install_windows.ps1 — never commit a local environment
+.venv/
+# machine-specific OptiTrack calibration / motive profiles — keep yours local
+*.cal
+*.motive
