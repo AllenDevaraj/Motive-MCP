@@ -93,24 +93,12 @@ The calibration and the rigid body have to exist before the script can use them:
 3. *(Optional)* Save a `.motive` profile and point `PROFILE` at it — otherwise make sure the
    body is in the project Motive auto-loads, and just set `CALIBRATION`.
 
----
-
-## Optional: agent-driven control (`mcp-server/`)
-
-Everything needed to stream the pose is above — you can ignore this section. If you *also*
-want **Claude (or another agent) to drive Motive remotely** (load calibration, create the
-rigid body, toggle streaming, check tracking, all headless), that lives entirely in
-**[`mcp-server/`](mcp-server/)** — a self-contained Claude Code plugin + MCP server. It's
-optional and fully separate from the publisher path; see
-[`mcp-server/README.md`](mcp-server/README.md).
-
 ## Repo layout
 ```
 publish_sportmodestate.py   ← the one-file publisher (start here; runs on the Motive PC)
 pose_udp_bridge.py          ← UDP→DDS bridge for WiFi mode (runs on the box wired to the robot)
 install_windows.ps1         ← one-command Windows install (Python 3.10 + CycloneDDS + SDK)
 unitree_sdk2_python/        ← vendored Unitree SDK (the installer installs this for you)
-mcp-server/                 ← OPTIONAL agent-driven Motive control (ignore for the basic flow)
 ```
 
 ## Notes

@@ -7,3 +7,5 @@ __pycache__/
 # machine-specific OptiTrack calibration / motive profiles — keep yours local
 *.cal
 *.motive
+# developer-only: agent-driven MCP control lives on the `dev-archive` branch, not main
+mcp-server/
