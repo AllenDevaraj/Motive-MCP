@@ -8,7 +8,7 @@ import yaml
 
 from .types import Vec3
 
-DEFAULT_RIGID_BODY_NAME = "h1_2_pelvis"
+DEFAULT_RIGID_BODY_NAME = "h1_2_pelvis_front"
 DEFAULT_VRPN_HOST = "tcp://192.168.50.10"
 DEFAULT_VRPN_PORT = 3883
 DEFAULT_DDS_TOPIC = "rt/sportmodestate"
@@ -106,7 +106,7 @@ def load_config(path: str | Path) -> AppConfig:
     )
     transform = TransformConfig(
         imu_offset_m=_to_vec3(transform_raw.get("imu_offset_m", DEFAULT_IMU_OFFSET_M)),
-        rigid_body_origin_is_imu_site=bool(transform_raw.get("rigid_body_origin_is_imu_site", True)),
+        rigid_body_origin_is_imu_site=bool(transform_raw.get("rigid_body_origin_is_imu_site", False)),
     )
     frame = FrameConfig(
         world_z_up=bool(frame_raw.get("world_z_up", True)),

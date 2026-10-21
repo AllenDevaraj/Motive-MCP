@@ -1,6 +1,6 @@
 stream:
   protocol: vrpn
-  rigid_body_name: h1_2_pelvis
+  rigid_body_name: h1_2_pelvis_front
   # Explicit choice: larger MoCap system uses .10, smaller uses .24.
   server_host: tcp://192.168.50.10
   server_port: 3883
@@ -20,10 +20,10 @@ dds:
   network_interface: enx00e04c681314
 
 transform:
-  # IMU_OFFSET in pelvis frame (meters). Used only when origin is pelvis frame (option 2).
+  # Deployment approximation: treat the front marker centroid as the pelvis origin and rotate
+  # the HAMS torso->IMU offset with the rigid-body orientation. Keep torso yaw near zero.
   imu_offset_m: [-0.04452, -0.01891, 0.27756]
-  # Recommended strategy: track IMU site directly in Motive (option 1), no bridge offset math.
-  rigid_body_origin_is_imu_site: true
+  rigid_body_origin_is_imu_site: false
 
 frame:
   world_z_up: true

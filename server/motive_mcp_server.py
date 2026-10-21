@@ -143,8 +143,8 @@ def load_rigid_bodies(path: str, replace: bool = False) -> dict:
 @mcp.tool()
 def create_rigid_body(name: str, marker_xyz_m: list[float], rb_id: int = 1) -> dict:
     """Create a rigid body from marker positions (flat [x,y,z, x,y,z, ...] in METERS, relative to
-    the desired pivot). For the H1-2, place the pivot at the pelvis IMU site so the published pose
-    matches the controller's expectation (see the motive-workflow skill)."""
+    the desired pivot). The current H1-2 front-body deployment uses the marker centroid as an
+    approximate pelvis origin and applies the configured torso-to-IMU offset downstream."""
     with _lock:
         api = _require()
         api.create_rigid_body(name, rb_id, marker_xyz_m)
@@ -235,7 +235,8 @@ def set_frame_rate(hz: int) -> dict:
 @mcp.tool()
 def enable_vrpn(port: int = 3883) -> dict:
     """Enable VRPN streaming on the given TCP port (3883 is the lab default). Our Linux-side
-    bridge subscribes 'h1_2_pelvis@tcp://<this-pc-ip>:3883' and republishes rt/sportmodestate."""
+    bridge subscribes 'h1_2_pelvis_front@tcp://<this-pc-ip>:3883' and republishes
+    rt/sportmodestate."""
     with _lock:
         _require().stream_vrpn(True, port)
         return {"ok": True, "vrpn": True, "port": port}

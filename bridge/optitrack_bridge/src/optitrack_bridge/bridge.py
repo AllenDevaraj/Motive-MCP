@@ -67,9 +67,10 @@ class OptiTrackBridge:
 
     def _to_publish_position(self, sample: PoseSample) -> Vec3:
         if self._config.transform.rigid_body_origin_is_imu_site:
-            # Recommended path: track IMU site directly in Motive and publish as-is.
+            # Exact path when the rigid-body pivot tracks the IMU site directly.
             return sample.position_m
-        # Alternate path: if tracking pelvis-frame origin, rotate pelvis->IMU offset by IMU orientation.
+        # Deployment approximation: treat the marker centroid as the pelvis origin and rotate the
+        # torso->IMU offset by the rigid-body orientation (valid while torso yaw remains near zero).
         rotated = _rotate_vec(sample.quaternion_wxyz, self._config.transform.imu_offset_m)
         return (
             sample.position_m[0] + rotated[0],
@@ -112,7 +113,8 @@ class OptiTrackBridge:
             )
         else:
             self._logger.info(
-                "Using pelvis-origin mode: applying rotated IMU offset %s to publish IMU-site position.",
+                "Using front-centroid approximation: applying rotated torso->IMU offset %s "
+                "(keep torso yaw near zero).",
                 self._config.transform.imu_offset_m,
             )
         if self._config.bridge.velocity_from_position:

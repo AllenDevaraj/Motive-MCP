@@ -24,21 +24,25 @@ already calibrated). Your job is the software side around that.
 2. `status()` — confirm cameras detected and list rigid bodies.
 3. Ensure the H1-2 base body exists:
    - if a `.tra`/`.motive` for it exists → `load_rigid_bodies(path, replace=false)`;
-   - else `create_rigid_body("h1_2_pelvis", marker_xyz_m, rb_id=1)` from pelvis markers.
-   - `set_rigid_body_enabled("h1_2_pelvis", true)`.
+   - else `create_rigid_body("h1_2_pelvis_front", marker_xyz_m, rb_id=1)` from pelvis markers.
+   - `set_rigid_body_enabled("h1_2_pelvis_front", true)`.
+   - `set_rigid_body_enabled("h1_2_pelvis_back", false)` so the legacy body cannot compete for
+     markers or enter the active stream.
 4. `set_frame_rate(240)` (or whatever the volume supports; ≥ planner rate ~60 Hz).
-5. `rigid_body_pose("h1_2_pelvis")` — sanity check: `tracked=true`, `mean_error_mm` small (~<2 mm),
+5. `rigid_body_pose("h1_2_pelvis_front")` — sanity check: `tracked=true`, `mean_error_mm` small (~<2 mm),
    and `z` ≈ the real height of the tracked point above the floor.
 6. `enable_vrpn(3883)` — start streaming. The Linux bridge then consumes
-   `h1_2_pelvis@tcp://<motive-pc-ip>:3883` → `rt/sportmodestate`.
+   `h1_2_pelvis_front@tcp://<motive-pc-ip>:3883` → `rt/sportmodestate`.
 7. When done: `shutdown()` (releases cameras so the GUI can reopen).
 
 ## H1-2 conventions (must match the controller — see OPTITRACK_HANDOFF.md)
 
-- **Rigid-body name:** `h1_2_pelvis`.
-- **Tracked point = the pelvis IMU site.** Set the rigid-body pivot at the physical IMU so the
-  streamed position is the IMU-site pose the node expects; the node backs out the pelvis with
-  `IMU_OFFSET = [-0.04452, -0.01891, 0.27756] m`. Orientation comes from the robot IMU, not mocap.
+- **Active rigid-body name:** `h1_2_pelvis_front`.
+- **Disabled legacy body:** `h1_2_pelvis_back`.
+- **Current deployment approximation:** the `h1_2_pelvis_front` pivot is its six-marker centroid,
+  treated as the pelvis origin. The bridge rotates
+  `IMU_OFFSET = [-0.04452, -0.01891, 0.27756] m` to produce the IMU-site pose expected by the node.
+  Keep torso yaw near zero; HAMS defines this offset in the torso frame.
 - **World frame:** z-up, floor at z=0, +x = robot forward. (Set the ground plane in the GUI to match;
   the API can't set it in 2.2.)
 - **Streaming:** VRPN (TCP 3883). The node only needs accurate **position**; it re-derives velocity.

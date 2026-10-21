@@ -67,8 +67,9 @@ You should see periodic health logs with publish counts.
    - floor at `z = 0`
    - `x` points robot-forward
 3. Define rigid body in Motive:
-   - recommended default name: `h1_2_pelvis`
-   - recommended strategy: track the IMU site directly (pivot/origin at IMU site)
+   - active body name: `h1_2_pelvis_front`
+   - keep `h1_2_pelvis_back` disabled as the legacy backup
+   - current deployment treats the six-marker centroid as the pelvis origin
 4. Prefer VRPN:
    - Data Streaming pane: Transmission Type = Unicast, Broadcast VRPN = On
    - note Local Interface IP (`192.168.50.10` larger system or `192.168.50.24` smaller)
@@ -85,7 +86,8 @@ You should see periodic health logs with publish counts.
 
 ## Important Defaults and Assumptions
 
-- Recommended rigid-body name default: `h1_2_pelvis`
+- Recommended active rigid-body name default: `h1_2_pelvis_front`
+- Disabled legacy rigid body: `h1_2_pelvis_back`
 - DDS topic: `rt/sportmodestate`
 - Publish rate target: `200 Hz` default
 - Protocol preference: `VRPN` first (Motive 2.2)
@@ -93,8 +95,9 @@ You should see periodic health logs with publish counts.
 - Domain ID default: `0` for real robot
 - Coordinate assumptions: world z-up, floor z=0, x-forward
 - Message mapping: only `position[0:3]` and `velocity[0:3]`; orientation is not from this bridge
-- IMU_OFFSET constant (pelvis frame): `[-0.04452, -0.01891, 0.27756]` m
-- Recommended transform strategy: track IMU site directly (no offset math in bridge default path)
+- HAMS torso-to-IMU offset: `[-0.04452, -0.01891, 0.27756]` m
+- Default transform strategy: treat the front centroid as the pelvis origin and rotate that offset;
+  keep torso yaw near zero
 - Alternate strategy: if tracking pelvis origin, publish IMU-site position via rotated IMU_OFFSET
 
 ## Network Guidance

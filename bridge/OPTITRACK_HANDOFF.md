@@ -122,8 +122,9 @@ Both use the identical OptiTrack setup.
 
 ## 3. The robot rigid body — what to track
 
-You will define **one rigid body**: the robot's **pelvis / base link** (the floating base of the
-model). Practical requirements:
+The active rigid body is the robot's **pelvis / base link** (the floating base of the model).
+The current active asset is `h1_2_pelvis_front`; the legacy `h1_2_pelvis_back` asset must remain
+disabled. Practical requirements:
 
 - **Markers on the pelvis/torso base**, rigidly mounted (no flex relative to the pelvis).
 - **Asymmetric** placement so Motive can resolve orientation unambiguously.
@@ -132,8 +133,7 @@ model). Practical requirements:
 - The body must track **continuously** — dropouts feed the controller a frozen/teleporting base,
   which is worse than a noisy estimate.
 
-Name it consistently (suggest **`h1_2_base`** or **`pelvis`**) — the consumer subscribes by name
-(VRPN) and we need to know that name. Report the exact name back.
+The consumer subscribes to **`h1_2_pelvis_front`** by name over VRPN.
 
 ---
 
@@ -167,12 +167,11 @@ from the source: `dds_tools/base_estimator_node.py` (the thing you're replacing)
 - The position we publish is **not** the pelvis origin directly — it is the **pelvis IMU site**,
   i.e. `pelvis + R(base_quat)·IMU_OFFSET`. The node backs the pelvis out with
   `base_p = site_p − R·IMU_OFFSET`. So the bridge must publish the **IMU-site point**, *or* define
-  the OptiTrack rigid-body origin at the IMU site. `IMU_OFFSET` is a fixed pelvis→IMU translation —
-  get its value from `base_estimator_node.py` / the model (ask via `questions_for_main.md`).
-  - *Pragmatically:* mocap gives you the rigid-body pose; apply the known static transform
-    (rigid-body frame → IMU site) so the published `position` matches the convention the estimator
-    used. If unsure, ask for the exact transform — getting this wrong shifts the base and the
-    planner mis-balances.
+  the OptiTrack rigid-body origin at the IMU site. HAMS defines `IMU_OFFSET` as a fixed
+  torso-origin→IMU translation.
+  - *Current deployment approximation:* treat the front marker centroid as the pelvis origin and
+    rotate `IMU_OFFSET` with the rigid-body orientation, as in the prior successful rear-cluster
+    deployment. Keep torso yaw near zero. This retains a fixed centroid-to-pelvis position bias.
 
 **Orientation is NOT your job**
 - Base **orientation** comes from the robot's **IMU** (`rt/lowstate`), *not* from
@@ -347,7 +346,7 @@ Fill these in and send back — they let the main agent spec the DDS bridge prec
    (robot) at once? ______
 
 **Questions to ask the main agent (high-value):**
-- "What is the exact `IMU_OFFSET` (pelvis→IMU translation) and how does
+- "What is the exact `IMU_OFFSET` (torso-origin→IMU translation) and how does
   `base_estimator_node.py` map the rigid-body/site pose to the published
   `sportmodestate.position`? Paste the relevant lines."
 - "Confirm the world-frame convention MJPC expects (axes, origin, units) and the home-keyframe

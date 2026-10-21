@@ -100,19 +100,20 @@ def _check_transform_strategy(config: AppConfig) -> CheckResult:
     offset_match = tuple(round(v, 5) for v in config.transform.imu_offset_m) == expected_offset
     if config.transform.rigid_body_origin_is_imu_site:
         detail = (
-            "recommended mode enabled: tracking IMU site directly (no bridge offset math in default path)"
+            "exact IMU-site mode enabled: no bridge offset math"
         )
         return ("Transform strategy", True, detail)
     if not offset_match:
         return (
             "Transform strategy",
             False,
-            f"pelvis-origin mode selected but imu_offset_m != {expected_offset}",
+            f"front-centroid approximation selected but imu_offset_m != {expected_offset}",
         )
     return (
         "Transform strategy",
         True,
-        f"alternate pelvis-origin mode enabled with IMU_OFFSET={expected_offset}",
+        f"default front-centroid approximation enabled with torso->IMU offset={expected_offset}; "
+        "keep torso yaw near zero",
     )
 
 

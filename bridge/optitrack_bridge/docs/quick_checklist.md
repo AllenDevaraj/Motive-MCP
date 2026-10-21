@@ -4,7 +4,8 @@ This checklist mirrors the current success criteria and defaults from `answers_f
 
 ## Required defaults
 
-- Rigid body default name: `h1_2_pelvis`
+- Active rigid body default name: `h1_2_pelvis_front`
+- Disabled legacy body: `h1_2_pelvis_back`
 - Protocol default: VRPN (recommended for Motive 2.2)
 - VRPN endpoint default: `tcp://192.168.50.10:3883`
 - Alternate Motive host option: `tcp://192.168.50.24:3883`
@@ -12,12 +13,13 @@ This checklist mirrors the current success criteria and defaults from `answers_f
 - DDS domain ID (real robot): `0`
 - Published fields: `position[0:3]`, `velocity[0:3]` only
 - Orientation source: not this bridge (comes from IMU / `rt/lowstate`)
-- IMU_OFFSET constant in pelvis frame: `[-0.04452, -0.01891, 0.27756]`
+- HAMS torso-to-IMU offset: `[-0.04452, -0.01891, 0.27756]`
 
 ## Recommended tracking strategy
 
-- Preferred: track IMU site directly in Motive and publish position directly (no offset math in bridge).
-- Alternate option 2: if tracking pelvis origin, publish IMU-site position using rotated IMU_OFFSET.
+- Current deployment: treat the front marker centroid as the pelvis origin and publish the IMU-site
+  approximation using the rotated offset. Keep torso yaw near zero.
+- Exact alternative: track the IMU site directly and publish position without offset math.
 
 ## Frame convention and motion test
 

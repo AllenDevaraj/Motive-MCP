@@ -13,8 +13,9 @@ read "recommended" as "tested".
 the rigid-body name only matters as the **VRPN tracker name** your client subscribes to. Pick one,
 use it consistently, and tell us what you picked.
 
-- **Recommended name: `h1_2_pelvis`** (the model's floating base link is the *pelvis*).
-- The bridge will then subscribe `vrpn.receiver.Tracker("h1_2_pelvis@tcp://<MoCapIP>:3883")`.
+- **Active name: `h1_2_pelvis_front`** (the model's floating base link is the *pelvis*).
+- The bridge subscribes `vrpn.receiver.Tracker("h1_2_pelvis_front@tcp://<MoCapIP>:3883")`.
+- Keep the legacy `h1_2_pelvis_back` body disabled.
 - ⚠️ Don't reuse or delete other people's saved rigid bodies in the Assets pane.
 
 ---
@@ -34,11 +35,12 @@ use it consistently, and tell us what you picked.
   confirm it with the motion test in Q6 (move +1 m forward ⇒ `x` increases by 1; lift 0.5 m ⇒ `z`
   increases by 0.5). Lock the mapping empirically.
 
-### 2b. IMU_OFFSET (pelvis → IMU site), confirmed value
+### 2b. IMU_OFFSET (torso origin → IMU site), confirmed value
 ```
-IMU_OFFSET = [-0.04452, -0.01891, 0.27756]   # meters, in the PELVIS body frame
+IMU_OFFSET = [-0.04452, -0.01891, 0.27756]   # meters, in the TORSO body frame
 ```
-(Identical in `base_estimator_node.py:51` and `h12_control_node.cc:317`.)
+(Identical in `base_estimator_node.py:51` and `h12_control_node.cc:317`; HAMS places the torso
+joint at the pelvis origin.)
 
 ### 2c. What point you must publish, and the math
 We publish the **IMU-site world pose**, not the pelvis origin. The node recovers the pelvis with
@@ -50,7 +52,12 @@ the **IMU quaternion** (from `rt/lowstate`):
   `roff = R · IMU_OFFSET` ; `site_p = [x, y, height] + roff` ; `site_v = v + ω_world × roff`
 
 So the node will subtract `R·IMU_OFFSET` (using the live IMU orientation) from whatever you put in
-`position`. Two clean ways to satisfy that:
+`position`. The current real-deployment approximation is to treat the
+`h1_2_pelvis_front` marker centroid as the pelvis origin and rotate this offset with the Motive
+rigid-body orientation. This matches the previously successful rear-cluster path, but assumes
+torso yaw remains near zero and includes a fixed centroid-to-pelvis position bias.
+
+Two exact alternatives are:
 
 1. **★ Easiest & most robust — track the IMU site directly.** Set the Motive rigid-body **pivot at
    the physical pelvis IMU location**, axes aligned to the pelvis. Then the streamed position *is*
@@ -77,8 +84,8 @@ tracked point right (option 1) avoids a tilt-dependent base error.
 - **Client (pyvrpn), from the PDF's working example:**
   ```python
   import vrpn
-  t = vrpn.receiver.Tracker("h1_2_pelvis@tcp://192.168.50.10:3883")  # use YOUR system IP
-  t.register_change_handler("h1_2_pelvis", callback, "position")
+  t = vrpn.receiver.Tracker("h1_2_pelvis_front@tcp://192.168.50.10:3883")  # use YOUR system IP
+  t.register_change_handler("h1_2_pelvis_front", callback, "position")
   while True:
       t.mainloop()   # pumps; callback receives {'position': (x,y,z), 'quaternion': (...)}
   ```
@@ -186,7 +193,7 @@ def to_world(p_motive):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument("--body", default="h1_2_pelvis")          # VRPN tracker name (Q1)
+    ap.add_argument("--body", default="h1_2_pelvis_front")    # VRPN tracker name (Q1)
     ap.add_argument("--mocap-ip", default="192.168.50.10")    # bigger MoCap (Q5)
     ap.add_argument("--port", type=int, default=3883)
     ap.add_argument("--iface", default=None, help="robot DDS NIC, e.g. enx... (read via 'ip -br link')")
