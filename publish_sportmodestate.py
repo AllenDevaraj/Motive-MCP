@@ -59,8 +59,12 @@ CONFIG = {
     #     rigid body already lives in Motive's auto-loaded project (as on this PC).
     #     If the script can't find RIGID_BODY, point this at a profile that has it.
 
-    "RIGID_BODY":   "h1_2_pelvis",
-    #   ^ Name of the rigid body to track (exact match).
+    "RIGID_BODY":   "h1_2_pelvis_front",
+    #   ^ Active front marker cluster. Its Motive pivot is the six-marker centroid; for the
+    #     proven deployment path below, that centroid is treated as the pelvis origin.
+
+    "DISABLED_RIGID_BODIES": ("h1_2_pelvis_back",),
+    #   ^ Legacy/backup bodies to disable after loading the Motive project. Missing names only warn.
 
     # ---- ROBOT DDS OUTPUT -------------------------------------------------------------
     "DDS_INTERFACE": "",
@@ -89,8 +93,9 @@ CONFIG = {
     #     Use "x,y,z" if Motive is already streaming Z-up. VALIDATE with the motion test.
 
     "IMU_OFFSET_M":  (-0.04452, -0.01891, 0.27756),
-    #   ^ pelvis-origin -> IMU site, in the pelvis body frame (matches the controller).
-    #     Set to (0, 0, 0) if the rigid-body PIVOT was placed AT the IMU site.
+    #   ^ Approximate centroid/pelvis-origin -> IMU site transform used by the prior real
+    #     deployment. HAMS defines this in the torso frame; using the pelvis rigid-body
+    #     orientation is accurate when torso yaw is near zero and otherwise introduces bias.
 
     "RATE_HZ":       200,         # publish rate Hz (cameras run 360Hz; timeBeginPeriod(1) lets the
     #                               Windows pacer hit ~200Hz. Drop to 100 if your box can't sustain it.)
@@ -173,6 +178,9 @@ class Motive:
         L.TT_RigidBodyName.argtypes = [c.c_int]
         L.TT_IsRigidBodyTracked.restype = c.c_bool
         L.TT_IsRigidBodyTracked.argtypes = [c.c_int]
+        L.TT_RigidBodyEnabled.restype = c.c_bool
+        L.TT_RigidBodyEnabled.argtypes = [c.c_int]
+        L.TT_SetRigidBodyEnabled.argtypes = [c.c_int, c.c_bool]
         L.TT_RigidBodyMeanError.restype = c.c_float
         L.TT_RigidBodyMeanError.argtypes = [c.c_int]
         # void TT_RigidBodyLocation(int, float* x,y,z, qx,qy,qz,qw, yaw,pitch,roll)
@@ -223,6 +231,12 @@ class Motive:
 
     def is_tracked(self, i):
         return bool(self.lib.TT_IsRigidBodyTracked(i))
+
+    def is_enabled(self, i):
+        return bool(self.lib.TT_RigidBodyEnabled(i))
+
+    def set_enabled(self, i, enabled):
+        self.lib.TT_SetRigidBodyEnabled(i, bool(enabled))
 
     def mean_error_mm(self, i):
         return float(self.lib.TT_RigidBodyMeanError(i)) * 1000.0
@@ -367,12 +381,24 @@ def main():
         mot.load_calibration(cfg["CALIBRATION"])
         print(f"[publisher] calibration loaded: {os.path.basename(cfg['CALIBRATION'])}", flush=True)
 
+        for name in cfg.get("DISABLED_RIGID_BODIES", ()):
+            disabled_idx = mot.rigid_body_index(name)
+            if disabled_idx < 0:
+                print(f"[publisher] WARNING: backup rigid body '{name}' not found; nothing to disable.",
+                      flush=True)
+                continue
+            mot.set_enabled(disabled_idx, False)
+            print(f"[publisher] disabled backup rigid body '{name}' (index {disabled_idx})", flush=True)
+
         idx = mot.rigid_body_index(cfg["RIGID_BODY"])
         if idx < 0:
             names = [mot.rigid_body_name(i) for i in range(mot.rigid_body_count())]
             sys.exit(f"[publisher] rigid body '{cfg['RIGID_BODY']}' not found.\n"
                      f"             Available: {names}\n"
                      f"             Set PROFILE to a .motive that contains it, or create it in the Motive GUI.")
+        if not mot.is_enabled(idx):
+            mot.set_enabled(idx, True)
+            print(f"[publisher] enabled active rigid body '{cfg['RIGID_BODY']}'", flush=True)
         print(f"[publisher] tracking rigid body '{cfg['RIGID_BODY']}' (index {idx})", flush=True)
 
         # --- DDS publisher ---

@@ -37,7 +37,8 @@ No server, no extra processes.
    | `MOTIVE_DIR` | Motive install folder (has `lib\NPTrackingToolsx64.dll`) |
    | `CALIBRATION` | path to the `.cal` calibration file **(required)** |
    | `PROFILE` | path to a `.motive` that contains the rigid body *(optional — leave `""` if the body is already in Motive's loaded project)* |
-   | `RIGID_BODY` | the rigid-body name, e.g. `h1_2_pelvis` |
+   | `RIGID_BODY` | the active rigid-body name, normally `h1_2_pelvis_front` |
+   | `DISABLED_RIGID_BODIES` | backup bodies disabled at startup, normally `("h1_2_pelvis_back",)` |
    | `DDS_INTERFACE` | the NIC name or IP on the robot's `192.168.123.x` network *(`""` = auto-detect)* |
    | `DDS_DOMAIN` / `OUT_TOPIC` | `0` / `rt/sportmodestate` for the real robot |
    | `UDP_SINK` | `""` for direct DDS; `"<bridge-ip>:9870"` for the WiFi/UDP-bridge mode (see **Network setup**) |
@@ -89,9 +90,13 @@ bus the MJPC controller reads, so `rt/sportmodestate` has to land there.
 ### Prerequisites in Motive (one-time, in the GUI)
 The calibration and the rigid body have to exist before the script can use them:
 1. Calibrate (or load an existing `.cal`) and set the ground plane.
-2. Stick markers on the pelvis, create a rigid body, name it `h1_2_pelvis`.
-3. *(Optional)* Save a `.motive` profile and point `PROFILE` at it — otherwise make sure the
+2. Stick markers on the pelvis, create the active rigid body as `h1_2_pelvis_front`.
+3. Keep the previous body as `h1_2_pelvis_back`, but disable it so it cannot compete for markers.
+4. *(Optional)* Save a `.motive` profile and point `PROFILE` at it — otherwise make sure the
    body is in the project Motive auto-loads, and just set `CALIBRATION`.
+
+The current real-deployment path treats the front body's six-marker centroid as an approximate
+pelvis origin and applies the HAMS torso-to-IMU offset in software. Keep torso yaw near zero.
 
 ## Repo layout
 ```
